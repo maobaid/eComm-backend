@@ -12,3 +12,31 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum UserRole {
+  SUPER_ADMIN
+  STORE_ADMIN
+  STAFF
+}
+
+model Store {
+  id         String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  is_active Boolean  @default(true)
+  created_at DateTime @default(now())
+  users     User[]
+}
+
+model User {
+  id            String   @id @default(uuid())
+  store_id      String?
+  name          String
+  email         String   @unique
+  password_hash String
+  role          UserRole
+  created_at    DateTime @default(now())
+  store         Store?   @relation(fields: [store_id], references: [id], onDelete: SetNull)
+  @@index([store_id])
+  @@index([email])
+}
