@@ -1,0 +1,10 @@
+export { AuthModule } from './auth.module.js';
+export { AuthService } from './auth.service.js';
+export { UserRole, ROLES_KEY } from './constants.js';
+export { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+export { RolesGuard } from './guards/roles.guard.js';
+export { StoreAccessGuard, SCOPED_STORE_ID } from './guards/store-access.guard.js';
+export { Roles } from './decorators/roles.decorator.js';
+export { CurrentUser, type CurrentUserPayload } from './decorators/current-user.decorator.js';
+export { ScopedStoreId } from './decorators/scoped-store-id.decorator.js';
+export type { JwtPayload } from './strategies/jwt.strategy.js';
