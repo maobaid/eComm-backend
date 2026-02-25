@@ -207,4 +207,34 @@ export class OrdersService {
 
     return result;
   }
+
+  async findAll(storeId: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      order(this.prisma).findMany({
+        where: { store_id: storeId },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+        include: { items: true },
+      }),
+      order(this.prisma).count({ where: { store_id: storeId } }),
+    ]);
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  }
+
+  async findOne(storeId: string, orderId: string) {
+    const o = await order(this.prisma).findFirst({
+      where: { id: orderId, store_id: storeId },
+      include: { items: true, customer: true, address: true, coupon: true },
+    });
+    if (!o) throw new NotFoundException('Order not found');
+    return o;
+  }
 }

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -67,6 +67,54 @@ export class AuthService {
       },
     });
     return this.toAuthUser(user);
+  }
+
+  /**
+   * Self-signup: create a store and its owner (STORE_ADMIN) in one transaction.
+   * Use this when a new merchant wants to open a store.
+   */
+  async registerStore(data: {
+    name: string;
+    email: string;
+    password: string;
+    store_name: string;
+    store_slug: string;
+  }): Promise<{ user: AuthUser; store: { id: string; name: string; slug: string } }> {
+    const email = data.email.trim().toLowerCase();
+    const existingUser = await this.findUserByEmail(email);
+    if (existingUser) throw new ConflictException('Email already registered');
+
+    const existingSlug = await (this.prisma as any).store.findUnique({
+      where: { slug: data.store_slug },
+    });
+    if (existingSlug) throw new ConflictException('Store slug already taken');
+
+    const password_hash = await bcrypt.hash(data.password, 10);
+
+    const result = await this.prisma.$transaction(async (tx: any) => {
+      const store = await tx.store.create({
+        data: {
+          name: data.store_name,
+          slug: data.store_slug,
+          is_active: true,
+        },
+      });
+      const user = await tx.user.create({
+        data: {
+          name: data.name,
+          email,
+          password_hash,
+          role: UserRole.STORE_ADMIN,
+          store_id: store.id,
+        },
+      });
+      return { store, user };
+    });
+
+    return {
+      user: this.toAuthUser(result.user),
+      store: { id: result.store.id, name: result.store.name, slug: result.store.slug },
+    };
   }
 
   async findUserById(id: string): Promise<AuthUser | null> {

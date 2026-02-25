@@ -10,20 +10,27 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { StoreAccessGuard } from '../auth/guards/store-access.guard.js';
 import { ScopedStoreId } from '../auth/decorators/scoped-store-id.decorator.js';
+import { RequireStoreManager } from '../auth/decorators/require-store-manager.decorator.js';
 import { AddressesService } from './addresses.service.js';
 import { CreateAddressDto } from './dto/create-address.dto.js';
 import { UpdateAddressDto } from './dto/update-address.dto.js';
 import { PaginationQueryDto } from './dto/pagination-query.dto.js';
 
+@ApiTags('Addresses')
 @Controller('stores/:storeId/customers/:customerId/addresses')
 @UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 
   @Post()
+  @RequireStoreManager()
+  @ApiOperation({ summary: 'Create address for customer' })
+  @ApiBody({ type: CreateAddressDto })
+  @ApiResponse({ status: 201, description: 'Address created' })
   create(
     @ScopedStoreId() storeId: string | undefined,
     @Param('storeId') _storeId: string,
@@ -71,6 +78,7 @@ export class AddressesController {
   }
 
   @Patch(':addressId')
+  @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
     @Param('customerId', ParseUUIDPipe) customerId: string,
@@ -91,6 +99,7 @@ export class AddressesController {
   }
 
   @Delete(':addressId')
+  @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,
     @Param('customerId', ParseUUIDPipe) customerId: string,

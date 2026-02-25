@@ -1,16 +1,24 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { StoreAccessGuard } from '../auth/guards/store-access.guard.js';
 import { ScopedStoreId } from '../auth/decorators/scoped-store-id.decorator.js';
+import { RequireStoreManager } from '../auth/decorators/require-store-manager.decorator.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 
+@ApiTags('Orders')
 @Controller('stores/:storeId/orders')
 @UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
+  @RequireStoreManager()
+  @ApiOperation({ summary: 'Create order (product discounts + coupon applied in transaction)' })
+  @ApiBody({ type: CreateOrderDto })
+  @ApiResponse({ status: 201, description: 'Order created', schema: { example: { id: 'uuid', store_id: 'store-uuid', customer_id: 'uuid', address_id: 'uuid', total_amount: 99.99, total_product_discount_amount: 5, total_coupon_discount_amount: 0, status: 'PENDING', created_at: '2025-02-25T12:00:00.000Z' } } })
   create(
     @ScopedStoreId() storeId: string | undefined,
     @Body() dto: CreateOrderDto,
@@ -22,5 +30,22 @@ export class OrdersController {
       coupon_code: dto.coupon_code,
       scheduled_delivery: dto.scheduled_delivery,
     });
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'List orders (paginated)' })
+  @ApiOkResponse({ description: 'Paginated list with items', schema: { example: { data: [], total: 0, page: 1, limit: 20, totalPages: 1 } } })
+  findAll(@ScopedStoreId() storeId: string | undefined, @Query() query: PaginationQueryDto) {
+    return this.ordersService.findAll(storeId!, query.page, query.limit);
+  }
+
+  @Get(':orderId')
+  @ApiOperation({ summary: 'Get order by id' })
+  @ApiOkResponse({ description: 'Order with items, customer, address, coupon', schema: { type: 'object' } })
+  findOne(
+    @ScopedStoreId() storeId: string | undefined,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+  ) {
+    return this.ordersService.findOne(storeId!, orderId);
   }
 }
