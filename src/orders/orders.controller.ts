@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { StoreAccessGuard } from '../auth/guards/store-access.guard.js';
@@ -7,6 +7,7 @@ import { RequireStoreManager } from '../auth/decorators/require-store-manager.de
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto.js';
 
 @ApiTags('Orders')
 @Controller('stores/:storeId/orders')
@@ -47,5 +48,27 @@ export class OrdersController {
     @Param('orderId', ParseUUIDPipe) orderId: string,
   ) {
     return this.ordersService.findOne(storeId!, orderId);
+  }
+
+  @Patch(':orderId/status')
+  @RequireStoreManager()
+  @ApiOperation({ summary: 'Update order status' })
+  @ApiBody({ type: UpdateOrderStatusDto })
+  @ApiOkResponse({
+    description: 'Order with updated status',
+    schema: {
+      example: {
+        id: 'uuid',
+        store_id: 'store-uuid',
+        status: 'CONFIRMED',
+      },
+    },
+  })
+  updateStatus(
+    @ScopedStoreId() storeId: string | undefined,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
+    return this.ordersService.updateStatus(storeId!, orderId, dto.status);
   }
 }

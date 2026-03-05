@@ -237,4 +237,13 @@ export class OrdersService {
     if (!o) throw new NotFoundException('Order not found');
     return o;
   }
+
+  async updateStatus(storeId: string, orderId: string, status: string) {
+    await this.findOne(storeId, orderId);
+    return order(this.prisma).update({
+      where: { id: orderId },
+      data: { status },
+    });
+  }
 }
+
