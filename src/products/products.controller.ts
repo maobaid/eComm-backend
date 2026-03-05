@@ -22,30 +22,28 @@ import { UpdateProductDto } from './dto/update-product.dto.js';
 
 @ApiTags('Products')
 @Controller('stores/:storeId/products')
-@UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   create(@ScopedStoreId() storeId: string | undefined, @Body() dto: CreateProductDto) {
     return this.productsService.create(storeId!, dto);
   }
 
   @Get()
-  findAll(@ScopedStoreId() storeId: string | undefined, @Query() query: PaginationQueryDto) {
-    return this.productsService.findAll(storeId!, query.page, query.limit);
+  findAll(@Param('storeId') storeId: string, @Query() query: PaginationQueryDto) {
+    return this.productsService.findAll(storeId, query.page, query.limit);
   }
 
   @Get(':productId')
-  findOne(
-    @ScopedStoreId() storeId: string | undefined,
-    @Param('productId', ParseUUIDPipe) productId: string,
-  ) {
-    return this.productsService.findOne(storeId!, productId);
+  findOne(@Param('storeId') storeId: string, @Param('productId', ParseUUIDPipe) productId: string) {
+    return this.productsService.findOne(storeId, productId);
   }
 
   @Patch(':productId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -56,6 +54,7 @@ export class ProductsController {
   }
 
   @Delete(':productId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,

@@ -22,30 +22,28 @@ import { UpdateCouponDto } from './dto/update-coupon.dto.js';
 
 @ApiTags('Coupons')
 @Controller('stores/:storeId/coupons')
-@UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class CouponsController {
   constructor(private readonly couponsService: CouponsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   create(@ScopedStoreId() storeId: string | undefined, @Body() dto: CreateCouponDto) {
     return this.couponsService.create(storeId!, dto);
   }
 
   @Get()
-  findAll(@ScopedStoreId() storeId: string | undefined, @Query() query: PaginationQueryDto) {
-    return this.couponsService.findAll(storeId!, query.page, query.limit);
+  findAll(@Param('storeId') storeId: string, @Query() query: PaginationQueryDto) {
+    return this.couponsService.findAll(storeId, query.page, query.limit);
   }
 
   @Get(':couponId')
-  findOne(
-    @ScopedStoreId() storeId: string | undefined,
-    @Param('couponId', ParseUUIDPipe) couponId: string,
-  ) {
-    return this.couponsService.findOne(storeId!, couponId);
+  findOne(@Param('storeId') storeId: string, @Param('couponId', ParseUUIDPipe) couponId: string) {
+    return this.couponsService.findOne(storeId, couponId);
   }
 
   @Patch(':couponId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -56,6 +54,7 @@ export class CouponsController {
   }
 
   @Delete(':couponId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,

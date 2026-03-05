@@ -22,11 +22,11 @@ import { UpdateCategoryDto } from './dto/update-category.dto.js';
 
 @ApiTags('Categories')
 @Controller('stores/:storeId/categories')
-@UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   create(@ScopedStoreId() storeId: string | undefined, @Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(storeId!, {
@@ -38,19 +38,17 @@ export class CategoriesController {
   }
 
   @Get()
-  findAll(@ScopedStoreId() storeId: string | undefined, @Query() query: PaginationQueryDto) {
-    return this.categoriesService.findAll(storeId!, query.page, query.limit);
+  findAll(@Param('storeId') storeId: string, @Query() query: PaginationQueryDto) {
+    return this.categoriesService.findAll(storeId, query.page, query.limit);
   }
 
   @Get(':categoryId')
-  findOne(
-    @ScopedStoreId() storeId: string | undefined,
-    @Param('categoryId', ParseUUIDPipe) categoryId: string,
-  ) {
-    return this.categoriesService.findOne(storeId!, categoryId);
+  findOne(@Param('storeId') storeId: string, @Param('categoryId', ParseUUIDPipe) categoryId: string) {
+    return this.categoriesService.findOne(storeId, categoryId);
   }
 
   @Patch(':categoryId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -61,6 +59,7 @@ export class CategoriesController {
   }
 
   @Delete(':categoryId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,
