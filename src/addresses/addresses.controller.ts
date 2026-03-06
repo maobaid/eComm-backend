@@ -59,12 +59,9 @@ export class AddressesController {
     @Param('customerId', ParseUUIDPipe) customerId: string,
     @Query() query: PaginationQueryDto,
   ) {
-    return this.addressesService.findAll(
-      storeId,
-      customerId,
-      query.page,
-      query.limit,
-    );
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
+    return this.addressesService.findAll(storeId, customerId, page, limit);
   }
 
   @Get(':addressId')
