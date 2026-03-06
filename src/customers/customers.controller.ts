@@ -11,7 +11,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { StoreAccessGuard } from '../auth/guards/store-access.guard.js';
 import { ScopedStoreId } from '../auth/decorators/scoped-store-id.decorator.js';
@@ -27,16 +27,11 @@ export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
-  @RequireStoreManager()
-  @ApiOperation({ summary: 'Create customer' })
+  @ApiOperation({ summary: 'Create customer (public, scoped by store)' })
   @ApiBody({ type: CreateCustomerDto })
   @ApiResponse({ status: 201, description: 'Customer created', schema: { example: { id: 'uuid', store_id: 'store-uuid', full_name: 'John Doe', phone_number: '+1234567890', email: 'john@example.com', created_at: '2025-02-25T12:00:00.000Z' } } })
-  create(
-    @ScopedStoreId() storeId: string | undefined,
-    @Body() dto: CreateCustomerDto,
-  ) {
-    return this.customersService.create(storeId!, {
+  create(@Param('storeId') storeId: string, @Body() dto: CreateCustomerDto) {
+    return this.customersService.create(storeId, {
       full_name: dto.full_name,
       phone_number: dto.phone_number,
       email: dto.email,
@@ -45,6 +40,7 @@ export class CustomersController {
 
   @Get('by-phone')
   @ApiOperation({ summary: 'Get customer by phone number (public, OTP verified on frontend)' })
+  @ApiQuery({ name: 'phone', required: true, description: 'Customer phone number', example: '+96512345678' })
   @ApiOkResponse({ description: 'Customer details', schema: { example: { id: 'uuid', store_id: 'store-uuid', full_name: 'John Doe', phone_number: '+1234567890', email: 'john@example.com', created_at: '2025-02-25T12:00:00.000Z' } } })
   findByPhone(@Param('storeId') storeId: string, @Query('phone') phone: string | undefined) {
     if (!phone || !phone.trim()) throw new BadRequestException('Phone number is required');
