@@ -22,22 +22,20 @@ import { PaginationQueryDto } from './dto/pagination-query.dto.js';
 
 @ApiTags('Addresses')
 @Controller('stores/:storeId/customers/:customerId/addresses')
-@UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create address for customer' })
+  @ApiOperation({ summary: 'Create address for customer (public, customer-facing)' })
   @ApiBody({ type: CreateAddressDto })
   @ApiResponse({ status: 201, description: 'Address created' })
   create(
-    @ScopedStoreId() storeId: string | undefined,
-    @Param('storeId') _storeId: string,
+    @Param('storeId') storeId: string,
     @Param('customerId', ParseUUIDPipe) customerId: string,
     @Body() dto: CreateAddressDto,
   ) {
     return this.addressesService.create(
-      storeId!,
+      storeId,
       customerId,
       {
         label: dto.label,
@@ -55,13 +53,14 @@ export class AddressesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List addresses for customer (public)' })
   findAll(
-    @ScopedStoreId() storeId: string | undefined,
+    @Param('storeId') storeId: string,
     @Param('customerId', ParseUUIDPipe) customerId: string,
     @Query() query: PaginationQueryDto,
   ) {
     return this.addressesService.findAll(
-      storeId!,
+      storeId,
       customerId,
       query.page,
       query.limit,
@@ -69,15 +68,17 @@ export class AddressesController {
   }
 
   @Get(':addressId')
+  @ApiOperation({ summary: 'Get one address (public)' })
   findOne(
-    @ScopedStoreId() storeId: string | undefined,
+    @Param('storeId') storeId: string,
     @Param('customerId', ParseUUIDPipe) customerId: string,
     @Param('addressId', ParseUUIDPipe) addressId: string,
   ) {
-    return this.addressesService.findOne(storeId!, customerId, addressId);
+    return this.addressesService.findOne(storeId, customerId, addressId);
   }
 
   @Patch(':addressId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -100,6 +101,7 @@ export class AddressesController {
   }
 
   @Delete(':addressId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,
