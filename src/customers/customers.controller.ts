@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -22,11 +23,11 @@ import { UpdateCustomerDto } from './dto/update-customer.dto.js';
 
 @ApiTags('Customers')
 @Controller('stores/:storeId/customers')
-@UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   @ApiOperation({ summary: 'Create customer' })
   @ApiBody({ type: CreateCustomerDto })
@@ -42,7 +43,16 @@ export class CustomersController {
     });
   }
 
+  @Get('by-phone')
+  @ApiOperation({ summary: 'Get customer by phone number (public, OTP verified on frontend)' })
+  @ApiOkResponse({ description: 'Customer details', schema: { example: { id: 'uuid', store_id: 'store-uuid', full_name: 'John Doe', phone_number: '+1234567890', email: 'john@example.com', created_at: '2025-02-25T12:00:00.000Z' } } })
+  findByPhone(@Param('storeId') storeId: string, @Query('phone') phone: string | undefined) {
+    if (!phone || !phone.trim()) throw new BadRequestException('Phone number is required');
+    return this.customersService.findByPhone(storeId, phone.trim());
+  }
+
   @Get()
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @ApiOperation({ summary: 'List customers (paginated)' })
   @ApiOkResponse({ description: 'Paginated list', schema: { example: { data: [], total: 0, page: 1, limit: 20, totalPages: 1 } } })
   findAll(
@@ -53,6 +63,7 @@ export class CustomersController {
   }
 
   @Get(':customerId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   findOne(
     @ScopedStoreId() storeId: string | undefined,
     @Param('customerId', ParseUUIDPipe) customerId: string,
@@ -61,6 +72,7 @@ export class CustomersController {
   }
 
   @Patch(':customerId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -75,6 +87,7 @@ export class CustomersController {
   }
 
   @Delete(':customerId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,

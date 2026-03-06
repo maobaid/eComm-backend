@@ -54,6 +54,14 @@ export class CustomersService {
     return c;
   }
 
+  async findByPhone(storeId: string, phoneNumber: string) {
+    const c = await db(this.prisma).findFirst({
+      where: { store_id: storeId, phone_number: phoneNumber },
+    });
+    if (!c) throw new NotFoundException('Customer not found');
+    return c;
+  }
+
   async update(
     storeId: string,
     customerId: string,

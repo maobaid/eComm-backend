@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { StoreAccessGuard } from '../auth/guards/store-access.guard.js';
@@ -9,16 +9,25 @@ import { UpsertDeliverySettingDto } from './dto/upsert-delivery-setting.dto.js';
 
 @ApiTags('Delivery Settings')
 @Controller('stores/:storeId/delivery-settings')
-@UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class DeliverySettingsController {
   constructor(private readonly deliverySettingsService: DeliverySettingsService) {}
 
+  /** Public: country/default options for address form (dropdown). State/city come from frontend or separate API. */
+  @Get('address-options')
+  @ApiOperation({ summary: 'Get address form options (default country, allowed countries)' })
+  @ApiOkResponse({ description: 'default_country, allowed_countries (array or null)' })
+  getAddressOptions(@Param('storeId') storeId: string) {
+    return this.deliverySettingsService.getAddressOptions(storeId);
+  }
+
   @Get()
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   findOne(@ScopedStoreId() storeId: string | undefined) {
     return this.deliverySettingsService.findOne(storeId!);
   }
 
   @Put()
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   @ApiOperation({ summary: 'Create or update delivery settings' })
   @ApiBody({ type: UpsertDeliverySettingDto })

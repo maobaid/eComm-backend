@@ -14,11 +14,41 @@ export class CreateAddressDto {
   @MaxLength(100)
   label!: string;
 
+  @ApiProperty({ example: 'KW' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  country!: string;
+
+  @ApiProperty({ example: 'Kuwait City' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  city!: string;
+
+  @ApiProperty({ example: 'Hawally' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  state!: string;
+
+  @ApiProperty({ example: '1' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(50)
+  block!: string;
+
   @ApiProperty({ example: 'Main St' })
   @IsString()
   @MinLength(1)
   @MaxLength(255)
   street!: string;
+
+  @ApiPropertyOptional({ example: '5th' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  avenue?: string | null;
 
   @ApiProperty({ example: '42' })
   @IsString()
@@ -31,30 +61,6 @@ export class CreateAddressDto {
   @IsString()
   @MaxLength(20)
   apartment_number?: string | null;
-
-  @ApiProperty({ example: 'New York' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  city!: string;
-
-  @ApiPropertyOptional({ example: 'NY' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  state?: string | null;
-
-  @ApiPropertyOptional({ example: '10001' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  postal_code?: string | null;
-
-  @ApiProperty({ example: 'USA' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  country!: string;
 
   @ApiPropertyOptional({ example: false })
   @IsOptional()

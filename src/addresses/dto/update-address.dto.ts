@@ -16,8 +16,36 @@ export class UpdateAddressDto {
   @IsOptional()
   @IsString()
   @MinLength(1)
+  @MaxLength(100)
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  city?: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  state!: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(50)
+  block?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
   @MaxLength(255)
   street?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  avenue?: string | null;
 
   @IsOptional()
   @IsString()
@@ -29,28 +57,6 @@ export class UpdateAddressDto {
   @IsString()
   @MaxLength(20)
   apartment_number?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  city?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  state?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  postal_code?: string | null;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  country?: string;
 
   @IsOptional()
   @IsBoolean()

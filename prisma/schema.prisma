@@ -71,13 +71,14 @@ model Address {
   store_id         String
   customer_id      String
   label            String
+  country          String
+  city             String
+  state            String
+  block            String
   street           String
+  avenue           String?
   building_number  String
   apartment_number String?
-  city             String
-  state            String?
-  postal_code      String?
-  country          String
   is_default       Boolean  @default(false)
   created_at       DateTime @default(now())
   store            Store    @relation(fields: [store_id], references: [id], onDelete: Cascade)
@@ -226,10 +227,12 @@ model OrderItem {
 }
 
 model DeliverySetting {
-  id               String   @id @default(uuid())
-  store_id         String   @unique
-  allow_scheduling Boolean  @default(false)
-  default_message  String?
-  created_at       DateTime @default(now())
-  store            Store    @relation(fields: [store_id], references: [id], onDelete: Cascade)
+  id                String   @id @default(uuid())
+  store_id          String   @unique
+  allow_scheduling  Boolean  @default(false)
+  default_message   String?
+  default_country   String?
+  allowed_countries  String?  // JSON array e.g. ["KW","SA","BH"]; null = use default_country only or all
+  created_at        DateTime @default(now())
+  store             Store    @relation(fields: [store_id], references: [id], onDelete: Cascade)
 }

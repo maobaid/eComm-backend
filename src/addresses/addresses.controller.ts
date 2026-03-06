@@ -27,7 +27,6 @@ export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 
   @Post()
-  @RequireStoreManager()
   @ApiOperation({ summary: 'Create address for customer' })
   @ApiBody({ type: CreateAddressDto })
   @ApiResponse({ status: 201, description: 'Address created' })
@@ -42,13 +41,14 @@ export class AddressesController {
       customerId,
       {
         label: dto.label,
-        street: dto.street,
-        building_number: dto.building_number,
-        apartment_number: dto.apartment_number,
+        country: dto.country,
         city: dto.city,
         state: dto.state,
-        postal_code: dto.postal_code,
-        country: dto.country,
+        block: dto.block,
+        street: dto.street,
+        avenue: dto.avenue,
+        building_number: dto.building_number,
+        apartment_number: dto.apartment_number,
         is_default: dto.is_default,
       },
     );
@@ -87,13 +87,14 @@ export class AddressesController {
   ) {
     return this.addressesService.update(storeId!, customerId, addressId, {
       label: dto.label,
-      street: dto.street,
-      building_number: dto.building_number,
-      apartment_number: dto.apartment_number,
+      country: dto.country,
       city: dto.city,
       state: dto.state,
-      postal_code: dto.postal_code,
-      country: dto.country,
+      block: dto.block,
+      street: dto.street,
+      avenue: dto.avenue ?? undefined,
+      building_number: dto.building_number,
+      apartment_number: dto.apartment_number ?? undefined,
       is_default: dto.is_default,
     });
   }

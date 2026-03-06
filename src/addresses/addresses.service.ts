@@ -9,13 +9,14 @@ export interface AddressRecord {
   store_id: string;
   customer_id: string;
   label: string;
+  country: string;
+  city: string;
+  state: string;
+  block: string;
   street: string;
+  avenue: string | null;
   building_number: string;
   apartment_number: string | null;
-  city: string;
-  state: string | null;
-  postal_code: string | null;
-  country: string;
   is_default: boolean;
   created_at: Date;
 }
@@ -41,13 +42,14 @@ export class AddressesService {
     customerId: string,
     data: {
       label: string;
+      country: string;
+      city: string;
+      state: string;
+      block: string;
       street: string;
+      avenue?: string | null;
       building_number: string;
       apartment_number?: string | null;
-      city: string;
-      state?: string | null;
-      postal_code?: string | null;
-      country: string;
       is_default?: boolean;
     },
   ): Promise<AddressRecord> {
@@ -66,13 +68,14 @@ export class AddressesService {
             store_id: storeId,
             customer_id: customerId,
             label: data.label,
+            country: data.country,
+            city: data.city,
+            state: data.state,
+            block: data.block,
             street: data.street,
+            avenue: data.avenue ?? null,
             building_number: data.building_number,
             apartment_number: data.apartment_number ?? null,
-            city: data.city,
-            state: data.state ?? null,
-            postal_code: data.postal_code ?? null,
-            country: data.country,
             is_default: true,
           },
         });
@@ -85,13 +88,14 @@ export class AddressesService {
         store_id: storeId,
         customer_id: customerId,
         label: data.label,
+        country: data.country,
+        city: data.city,
+        state: data.state,
+        block: data.block,
         street: data.street,
+        avenue: data.avenue ?? null,
         building_number: data.building_number,
         apartment_number: data.apartment_number ?? null,
-        city: data.city,
-        state: data.state ?? null,
-        postal_code: data.postal_code ?? null,
-        country: data.country,
         is_default: false,
       },
     });
@@ -155,13 +159,14 @@ export class AddressesService {
     addressId: string,
     data: {
       label?: string;
+      country?: string;
+      city?: string;
+      state?: string;
+      block?: string;
       street?: string;
+      avenue?: string | null;
       building_number?: string;
       apartment_number?: string | null;
-      city?: string;
-      state?: string | null;
-      postal_code?: string | null;
-      country?: string;
       is_default?: boolean;
     },
   ): Promise<AddressRecord> {
@@ -184,19 +189,18 @@ export class AddressesService {
           where: { id: addressId },
           data: {
             ...(data.label !== undefined && { label: data.label }),
+            ...(data.country !== undefined && { country: data.country }),
+            ...(data.city !== undefined && { city: data.city }),
+            ...(data.state !== undefined && { state: data.state }),
+            ...(data.block !== undefined && { block: data.block }),
             ...(data.street !== undefined && { street: data.street }),
+            ...(data.avenue !== undefined && { avenue: data.avenue }),
             ...(data.building_number !== undefined && {
               building_number: data.building_number,
             }),
             ...(data.apartment_number !== undefined && {
               apartment_number: data.apartment_number,
             }),
-            ...(data.city !== undefined && { city: data.city }),
-            ...(data.state !== undefined && { state: data.state }),
-            ...(data.postal_code !== undefined && {
-              postal_code: data.postal_code,
-            }),
-            ...(data.country !== undefined && { country: data.country }),
             is_default: true,
           },
         });
@@ -206,16 +210,16 @@ export class AddressesService {
 
     const updatePayload: Record<string, unknown> = {};
     if (data.label !== undefined) updatePayload.label = data.label;
+    if (data.country !== undefined) updatePayload.country = data.country;
+    if (data.city !== undefined) updatePayload.city = data.city;
+    if (data.state !== undefined) updatePayload.state = data.state;
+    if (data.block !== undefined) updatePayload.block = data.block;
     if (data.street !== undefined) updatePayload.street = data.street;
+    if (data.avenue !== undefined) updatePayload.avenue = data.avenue;
     if (data.building_number !== undefined)
       updatePayload.building_number = data.building_number;
     if (data.apartment_number !== undefined)
       updatePayload.apartment_number = data.apartment_number;
-    if (data.city !== undefined) updatePayload.city = data.city;
-    if (data.state !== undefined) updatePayload.state = data.state;
-    if (data.postal_code !== undefined)
-      updatePayload.postal_code = data.postal_code;
-    if (data.country !== undefined) updatePayload.country = data.country;
     if (data.is_default === false) updatePayload.is_default = false;
 
     const updated = await prismaAddress(this.prisma).update({
