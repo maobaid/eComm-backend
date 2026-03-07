@@ -11,20 +11,15 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto.js';
 
 @ApiTags('Orders')
 @Controller('stores/:storeId/orders')
-@UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  @RequireStoreManager()
-  @ApiOperation({ summary: 'Create order (product discounts + coupon applied in transaction)' })
+  @ApiOperation({ summary: 'Create order (public, customer checkout)' })
   @ApiBody({ type: CreateOrderDto })
   @ApiResponse({ status: 201, description: 'Order created', schema: { example: { id: 'uuid', store_id: 'store-uuid', customer_id: 'uuid', address_id: 'uuid', total_amount: 99.99, total_product_discount_amount: 5, total_coupon_discount_amount: 0, status: 'PENDING', created_at: '2025-02-25T12:00:00.000Z' } } })
-  create(
-    @ScopedStoreId() storeId: string | undefined,
-    @Body() dto: CreateOrderDto,
-  ) {
-    return this.ordersService.create(storeId!, {
+  create(@Param('storeId') storeId: string, @Body() dto: CreateOrderDto) {
+    return this.ordersService.create(storeId, {
       customer_id: dto.customer_id,
       address_id: dto.address_id,
       items: dto.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
@@ -34,6 +29,7 @@ export class OrdersController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @ApiOperation({ summary: 'List orders (paginated)' })
   @ApiOkResponse({ description: 'Paginated list with items', schema: { example: { data: [], total: 0, page: 1, limit: 20, totalPages: 1 } } })
   findAll(@ScopedStoreId() storeId: string | undefined, @Query() query: PaginationQueryDto) {
@@ -41,6 +37,7 @@ export class OrdersController {
   }
 
   @Get(':orderId')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @ApiOperation({ summary: 'Get order by id' })
   @ApiOkResponse({ description: 'Order with items, customer, address, coupon', schema: { type: 'object' } })
   findOne(
@@ -51,6 +48,7 @@ export class OrdersController {
   }
 
   @Patch(':orderId/status')
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   @ApiOperation({ summary: 'Update order status' })
   @ApiBody({ type: UpdateOrderStatusDto })
