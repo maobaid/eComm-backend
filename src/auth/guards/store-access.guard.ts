@@ -21,6 +21,7 @@ export const SCOPED_STORE_ID = 'scopedStoreId';
 export class StoreAccessGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
+    console.log('[StoreAccessGuard] canActivate', request.method, request.path);
     const user = request.user as
       | { role: UserRole; store_id: string | null }
       | undefined;

@@ -26,9 +26,12 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
+  @UseGuards(JwtAuthGuard)
   @RequireStoreManager()
-  create(@ScopedStoreId() storeId: string | undefined, @Body() dto: CreateCategoryDto) {
+  create(
+    @ScopedStoreId() storeId: string | undefined,
+    @Body() dto: CreateCategoryDto,
+  ) {
     return this.categoriesService.create(storeId!, {
       name: dto.name,
       slug: dto.slug,
@@ -38,12 +41,18 @@ export class CategoriesController {
   }
 
   @Get()
-  findAll(@Param('storeId') storeId: string, @Query() query: PaginationQueryDto) {
+  findAll(
+    @Param('storeId') storeId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
     return this.categoriesService.findAll(storeId, query.page, query.limit);
   }
 
   @Get(':categoryId')
-  findOne(@Param('storeId') storeId: string, @Param('categoryId', ParseUUIDPipe) categoryId: string) {
+  findOne(
+    @Param('storeId') storeId: string,
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
+  ) {
     return this.categoriesService.findOne(storeId, categoryId);
   }
 
