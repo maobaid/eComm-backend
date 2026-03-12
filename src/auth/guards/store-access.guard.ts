@@ -25,7 +25,13 @@ export class StoreAccessGuard implements CanActivate {
       | { role: UserRole; store_id: string | null }
       | undefined;
 
-    if (!user) return false;
+    if (!user) {
+      console.log('[StoreAccessGuard] DENY: no user on request', {
+        method: request.method,
+        path: request.path,
+      });
+      return false;
+    }
 
     const storeId =
       request.params?.storeId ??
@@ -45,9 +51,18 @@ export class StoreAccessGuard implements CanActivate {
       return true;
     }
 
-    if (!storeId) throw new ForbiddenException('Store context required');
-    if (user.store_id !== storeId)
+    if (!storeId) {
+      console.log('[StoreAccessGuard] DENY: store context required', { path: request.path });
+      throw new ForbiddenException('Store context required');
+    }
+    if (user.store_id !== storeId) {
+      console.log('[StoreAccessGuard] DENY: store mismatch', {
+        path: request.path,
+        userStoreId: user.store_id,
+        requestStoreId: storeId,
+      });
       throw new ForbiddenException('Access denied to this store');
+    }
     request[SCOPED_STORE_ID] = user.store_id;
     return true;
   }

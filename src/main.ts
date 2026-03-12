@@ -7,6 +7,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
+
+  // Log every request (method + path) so POST and 403s show up in Render logs
+  app.use((req: any, _res: any, next: () => void) => {
+    console.log(`[Request] ${new Date().toISOString()} ${req.method} ${req.url}`);
+    next();
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
