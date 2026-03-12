@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { UserRole } from '../constants.js';
 
 /** Name of the request property set by this guard for use in services (effective store scope). */
@@ -16,7 +21,9 @@ export const SCOPED_STORE_ID = 'scopedStoreId';
 export class StoreAccessGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    const user = request.user as { role: UserRole; store_id: string | null } | undefined;
+    const user = request.user as
+      | { role: UserRole; store_id: string | null }
+      | undefined;
 
     if (!user) return false;
 
@@ -26,13 +33,21 @@ export class StoreAccessGuard implements CanActivate {
       request.body?.store_id ??
       request.query?.store_id;
 
+    console.log('[StoreAccessGuard]', {
+      path: request.path,
+      method: request.method,
+      user,
+      storeId,
+    });
+
     if (user.role === UserRole.SUPER_ADMIN) {
       request[SCOPED_STORE_ID] = storeId ?? undefined;
       return true;
     }
 
     if (!storeId) throw new ForbiddenException('Store context required');
-    if (user.store_id !== storeId) throw new ForbiddenException('Access denied to this store');
+    if (user.store_id !== storeId)
+      throw new ForbiddenException('Access denied to this store');
     request[SCOPED_STORE_ID] = user.store_id;
     return true;
   }
