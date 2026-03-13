@@ -26,7 +26,7 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   create(
     @ScopedStoreId() storeId: string | undefined,
