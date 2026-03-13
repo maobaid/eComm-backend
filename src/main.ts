@@ -11,12 +11,14 @@ async function bootstrap() {
 
   // Log every request (method + path) so POST and 403s show up in Render logs
   app.use((req: any, _res: any, next: () => void) => {
-    console.log(`[Request] ${new Date().toISOString()} ${req.method} ${req.url}`);
+    console.log(
+      `[Request] ${new Date().toISOString()} ${req.method} ${req.url}`,
+    );
     next();
   });
 
   // Log when request reaches guard phase (confirms route was matched and guards are running)
-  app.useGlobalGuards(new RequestLogGuard());
+  // app.useGlobalGuards(new RequestLogGuard());
 
   app.useGlobalPipes(
     new ValidationPipe({

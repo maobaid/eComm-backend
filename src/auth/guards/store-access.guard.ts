@@ -47,13 +47,15 @@ export class StoreAccessGuard implements CanActivate {
       storeId,
     });
 
-    if (user.role === UserRole.SUPER_ADMIN) {
+    if (user.role === UserRole.STORE_ADMIN) {
       request[SCOPED_STORE_ID] = storeId ?? undefined;
       return true;
     }
 
     if (!storeId) {
-      console.log('[StoreAccessGuard] DENY: store context required', { path: request.path });
+      console.log('[StoreAccessGuard] DENY: store context required', {
+        path: request.path,
+      });
       throw new ForbiddenException('Store context required');
     }
     if (user.store_id !== storeId) {
