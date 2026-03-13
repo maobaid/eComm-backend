@@ -18,7 +18,7 @@ async function bootstrap() {
   });
 
   // Log when request reaches guard phase (confirms route was matched and guards are running)
-  // app.useGlobalGuards(new RequestLogGuard());
+  app.useGlobalGuards(new RequestLogGuard());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -29,6 +29,8 @@ async function bootstrap() {
   );
   app.enableCors({
     origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   const config = new DocumentBuilder()
