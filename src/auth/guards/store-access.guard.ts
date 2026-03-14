@@ -21,17 +21,12 @@ export const SCOPED_STORE_ID = 'scopedStoreId';
 export class StoreAccessGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    console.log('[StoreAccessGuard] canActivate', request.method, request.path);
     const user = request.user as
       | { role: UserRole; store_id: string | null }
       | undefined;
 
     if (!user) {
-      console.log('[StoreAccessGuard] DENY: no user on request', {
-        method: request.method,
-        path: request.path,
-      });
-      return false;
+      throw new ForbiddenException('GUARD_STORE_ACCESS_NO_USER');
     }
 
     const storeId =
@@ -40,31 +35,16 @@ export class StoreAccessGuard implements CanActivate {
       request.body?.store_id ??
       request.query?.store_id;
 
-    console.log('[StoreAccessGuard]', {
-      path: request.path,
-      method: request.method,
-      user,
-      storeId,
-    });
-
-    if (user.role === UserRole.STORE_ADMIN) {
+    if (user.role === UserRole.SUPER_ADMIN) {
       request[SCOPED_STORE_ID] = storeId ?? undefined;
       return true;
     }
 
     if (!storeId) {
-      console.log('[StoreAccessGuard] DENY: store context required', {
-        path: request.path,
-      });
-      throw new ForbiddenException('Store context required');
+      throw new ForbiddenException('GUARD_STORE_ACCESS_NO_STORE_ID');
     }
     if (user.store_id !== storeId) {
-      console.log('[StoreAccessGuard] DENY: store mismatch', {
-        path: request.path,
-        userStoreId: user.store_id,
-        requestStoreId: storeId,
-      });
-      throw new ForbiddenException('Access denied to this store');
+      throw new ForbiddenException('GUARD_STORE_ACCESS_STORE_MISMATCH');
     }
     request[SCOPED_STORE_ID] = user.store_id;
     return true;
