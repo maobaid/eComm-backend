@@ -2,23 +2,19 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { RequestLogGuard } from './common/request-log.guard.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  // Log every request (method + path) so POST and 403s show up in Render logs
+  // Log every request (method + path)
   app.use((req: any, _res: any, next: () => void) => {
     console.log(
       `[Request] ${new Date().toISOString()} ${req.method} ${req.url}`,
     );
     next();
   });
-
-  // Log when request reaches guard phase (confirms route was matched and guards are running)
-  app.useGlobalGuards(new RequestLogGuard());
 
   app.useGlobalPipes(
     new ValidationPipe({

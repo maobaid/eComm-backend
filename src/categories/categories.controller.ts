@@ -32,6 +32,7 @@ export class CategoriesController {
     @ScopedStoreId() storeId: string | undefined,
     @Body() dto: CreateCategoryDto,
   ) {
+    console.log('[CategoriesController.create] reached', storeId);
     return this.categoriesService.create(storeId!, {
       name: dto.name,
       slug: dto.slug,
