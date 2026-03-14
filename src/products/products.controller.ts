@@ -26,7 +26,6 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   create(@ScopedStoreId() storeId: string | undefined, @Body() dto: CreateProductDto) {
     return this.productsService.create(storeId!, dto);
@@ -43,7 +42,6 @@ export class ProductsController {
   }
 
   @Patch(':productId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -54,7 +52,6 @@ export class ProductsController {
   }
 
   @Delete(':productId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,

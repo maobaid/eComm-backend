@@ -27,7 +27,6 @@ export class DeliverySettingsController {
   }
 
   @Put()
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   @ApiOperation({ summary: 'Create or update delivery settings' })
   @ApiBody({ type: UpsertDeliverySettingDto })

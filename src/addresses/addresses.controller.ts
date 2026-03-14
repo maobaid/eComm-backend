@@ -75,7 +75,6 @@ export class AddressesController {
   }
 
   @Patch(':addressId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -98,7 +97,6 @@ export class AddressesController {
   }
 
   @Delete(':addressId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,

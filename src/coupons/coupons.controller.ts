@@ -26,7 +26,6 @@ export class CouponsController {
   constructor(private readonly couponsService: CouponsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   create(@ScopedStoreId() storeId: string | undefined, @Body() dto: CreateCouponDto) {
     return this.couponsService.create(storeId!, dto);
@@ -54,7 +53,6 @@ export class CouponsController {
   }
 
   @Delete(':couponId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,

@@ -48,7 +48,6 @@ export class OrdersController {
   }
 
   @Patch(':orderId/status')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   @ApiOperation({ summary: 'Update order status' })
   @ApiBody({ type: UpdateOrderStatusDto })

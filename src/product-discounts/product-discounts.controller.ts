@@ -48,7 +48,6 @@ export class ProductDiscountsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   create(
     @ScopedStoreId() storeId: string | undefined,
@@ -58,7 +57,6 @@ export class ProductDiscountsController {
   }
 
   @Patch(':discountId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -69,7 +67,6 @@ export class ProductDiscountsController {
   }
 
   @Delete(':discountId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,

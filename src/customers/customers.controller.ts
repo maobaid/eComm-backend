@@ -68,7 +68,6 @@ export class CustomersController {
   }
 
   @Patch(':customerId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   update(
     @ScopedStoreId() storeId: string | undefined,
@@ -83,7 +82,6 @@ export class CustomersController {
   }
 
   @Delete(':customerId')
-  @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @RequireStoreManager()
   remove(
     @ScopedStoreId() storeId: string | undefined,
