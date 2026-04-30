@@ -17,6 +17,11 @@ export class CreateOrderItemDto {
   @ApiProperty({ example: 2, minimum: 1 })
   @Min(1)
   quantity!: number;
+
+  @ApiPropertyOptional({ example: 'variant-uuid' })
+  @IsOptional()
+  @IsUUID()
+  product_variant_id?: string;
 }
 
 export class CreateOrderDto {

@@ -9,7 +9,10 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateProductVariantDto } from './create-product.dto.js';
 
 export class UpdateProductDto {
   @IsOptional()
@@ -27,6 +30,7 @@ export class UpdateProductDto {
   description?: string | null;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price?: number;
@@ -52,11 +56,19 @@ export class UpdateProductDto {
   sizes?: string[];
 
   @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductVariantDto)
+  variants?: CreateProductVariantDto[];
+
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   stock_quantity?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   low_stock_threshold?: number;

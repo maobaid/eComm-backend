@@ -23,7 +23,11 @@ export class OrdersController {
     return this.ordersService.create(storeId, {
       customer_id: dto.customer_id,
       address_id: dto.address_id,
-      items: dto.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+      items: dto.items.map((i) => ({
+        product_id: i.product_id,
+        quantity: i.quantity,
+        product_variant_id: i.product_variant_id,
+      })),
       coupon_code: dto.coupon_code,
       scheduled_delivery: dto.scheduled_delivery,
     });

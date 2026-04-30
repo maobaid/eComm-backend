@@ -26,6 +26,12 @@ interface ProductRow {
   price: unknown;
   category_id: string | null;
   stock_quantity: number;
+  variants?: Array<{
+    id: string;
+    stock_quantity: number;
+    price_override: unknown;
+    is_active: boolean;
+  }>;
 }
 
 const APPLIES_TO = {
@@ -59,7 +65,7 @@ export class OrdersService {
     body: {
       customer_id: string;
       address_id: string;
-      items: { product_id: string; quantity: number }[];
+      items: { product_id: string; quantity: number; product_variant_id?: string }[];
       coupon_code?: string;
       scheduled_delivery?: string;
     },
@@ -90,6 +96,12 @@ export class OrdersService {
     const productIds = [...new Set(body.items.map((i) => i.product_id))];
     const products = await product(this.prisma).findMany({
       where: { id: { in: productIds }, store_id: storeId, is_active: true },
+      include: {
+        variants: {
+          where: { is_active: true },
+          select: { id: true, stock_quantity: true, price_override: true, is_active: true },
+        },
+      },
     });
     if (products.length !== productIds.length) {
       throw new BadRequestException('One or more products not found or inactive in this store');
@@ -99,7 +111,19 @@ export class OrdersService {
       if (item.quantity < 1) throw new BadRequestException('Quantity must be at least 1');
       const prod = productMap.get(item.product_id) as ProductRow | undefined;
       if (!prod) throw new BadRequestException('Product not found');
-      if (item.quantity > prod.stock_quantity) {
+      if (item.product_variant_id) {
+        const variant = (prod.variants || []).find((v) => v.id === item.product_variant_id);
+        if (!variant) {
+          throw new BadRequestException(
+            `Variant ${item.product_variant_id} does not belong to product ${item.product_id}`,
+          );
+        }
+        if (item.quantity > variant.stock_quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for variant ${item.product_variant_id}. Available: ${variant.stock_quantity}`,
+          );
+        }
+      } else if (item.quantity > prod.stock_quantity) {
         throw new BadRequestException(
           `Insufficient stock for product ${item.product_id}. Available: ${prod.stock_quantity}`,
         );
@@ -119,7 +143,10 @@ export class OrdersService {
     const lineInputs = body.items.map((item) => {
       const prod = productMap.get(item.product_id) as ProductRow | undefined;
       if (!prod) throw new BadRequestException('Product not found');
-      const unitPrice = Number(prod.price);
+      const selectedVariant = item.product_variant_id
+        ? (prod.variants || []).find((v) => v.id === item.product_variant_id)
+        : null;
+      const unitPrice = Number(selectedVariant?.price_override ?? prod.price);
       const qty = item.quantity;
       const lineSubtotal = round2(unitPrice * qty);
       let bestPct = 0;
@@ -135,6 +162,7 @@ export class OrdersService {
       const productDiscountApplied = round2(lineSubtotal * (bestPct / 100));
       return {
         product_id: prod.id,
+        product_variant_id: item.product_variant_id ?? null,
         quantity: qty,
         unit_price: unitPrice,
         product_discount_applied: productDiscountApplied,
@@ -210,22 +238,43 @@ export class OrdersService {
         data: lineInputs.map((l) => ({
           order_id: created.id,
           product_id: l.product_id,
+          product_variant_id: l.product_variant_id,
           quantity: l.quantity,
           unit_price: l.unit_price,
           product_discount_applied: l.product_discount_applied,
         })),
       });
       for (const l of lineInputs) {
-        const updated = await product(txPrisma).updateMany({
-          where: {
-            id: l.product_id,
-            store_id: storeId,
-            stock_quantity: { gte: l.quantity },
-          },
-          data: { stock_quantity: { decrement: l.quantity } },
-        });
-        if (updated.count !== 1) {
-          throw new BadRequestException(`Insufficient stock for product ${l.product_id}`);
+        if (l.product_variant_id) {
+          const updatedVariant = await (txPrisma as any).productVariant.updateMany({
+            where: {
+              id: l.product_variant_id,
+              product_id: l.product_id,
+              stock_quantity: { gte: l.quantity },
+              is_active: true,
+            },
+            data: { stock_quantity: { decrement: l.quantity } },
+          });
+          if (updatedVariant.count !== 1) {
+            throw new BadRequestException(`Insufficient stock for variant ${l.product_variant_id}`);
+          }
+
+          await product(txPrisma).update({
+            where: { id: l.product_id },
+            data: { stock_quantity: { decrement: l.quantity } },
+          });
+        } else {
+          const updated = await product(txPrisma).updateMany({
+            where: {
+              id: l.product_id,
+              store_id: storeId,
+              stock_quantity: { gte: l.quantity },
+            },
+            data: { stock_quantity: { decrement: l.quantity } },
+          });
+          if (updated.count !== 1) {
+            throw new BadRequestException(`Insufficient stock for product ${l.product_id}`);
+          }
         }
       }
       if (couponId) {

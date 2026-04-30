@@ -9,7 +9,47 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CreateProductVariantDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  color?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  size?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  sku?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  price_override?: number | null;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  stock_quantity!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  low_stock_threshold?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
+}
 
 export class CreateProductDto {
   @IsOptional()
@@ -26,6 +66,7 @@ export class CreateProductDto {
   description?: string | null;
 
   @IsNumber()
+  @Type(() => Number)
   @Min(0)
   price!: number;
 
@@ -50,11 +91,19 @@ export class CreateProductDto {
   sizes?: string[];
 
   @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductVariantDto)
+  variants?: CreateProductVariantDto[];
+
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   stock_quantity?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   low_stock_threshold?: number;
