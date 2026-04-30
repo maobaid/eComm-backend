@@ -35,6 +35,7 @@ model Store {
   coupons                Coupon[]
   productDiscounts       ProductDiscount[]
   orders                 Order[]
+  receipts               OrderReceipt[]
   deliverySetting        DeliverySetting?
   @@index([slug])
 }
@@ -190,6 +191,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum ReceiptWhatsappStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 model Order {
   id                           String      @id @default(uuid())
   store_id                     String
@@ -207,6 +214,7 @@ model Order {
   address                      Address     @relation(fields: [address_id], references: [id], onDelete: Restrict)
   coupon                       Coupon?     @relation(fields: [coupon_id], references: [id], onDelete: SetNull)
   items                        OrderItem[]
+  receipts                     OrderReceipt[]
   @@index([store_id])
   @@index([customer_id])
   @@index([store_id, status])
@@ -235,4 +243,25 @@ model DeliverySetting {
   allowed_countries  String?  // JSON array e.g. ["KW","SA","BH"]; null = use default_country only or all
   created_at        DateTime @default(now())
   store             Store    @relation(fields: [store_id], references: [id], onDelete: Cascade)
+}
+
+model OrderReceipt {
+  id               String                @id @default(uuid())
+  order_id         String
+  store_id         String
+  file_path        String
+  file_name        String
+  mime_type        String                @default("application/pdf")
+  size_bytes       Int
+  whatsapp_phone   String
+  whatsapp_status  ReceiptWhatsappStatus @default(PENDING)
+  whatsapp_message_id String?
+  send_attempts    Int                   @default(0)
+  last_error       String?
+  sent_at          DateTime?
+  created_at       DateTime              @default(now())
+  order            Order                 @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  store            Store                 @relation(fields: [store_id], references: [id], onDelete: Cascade)
+  @@index([order_id, created_at])
+  @@index([store_id, created_at])
 }

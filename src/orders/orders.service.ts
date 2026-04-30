@@ -1,9 +1,15 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ConfigService } from '@nestjs/config';
+import { createReadStream } from 'node:fs';
+import { access } from 'node:fs/promises';
+import { OrderReceiptsService } from './order-receipts.service.js';
+import { OrderWhatsappService } from './order-whatsapp.service.js';
 
 const store = (p: any) => p.store;
 const customer = (p: any) => p.customer;
@@ -35,7 +41,12 @@ function round2(n: number): number {
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly orderReceiptsService: OrderReceiptsService,
+    private readonly orderWhatsappService: OrderWhatsappService,
+  ) {}
 
   /**
    * Create order in a Prisma transaction. Applies product discounts first,
@@ -205,6 +216,7 @@ export class OrdersService {
       return created;
     });
 
+    await this.createAndSendReceiptSafe(storeId, result.id);
     return result;
   }
 
@@ -238,11 +250,106 @@ export class OrdersService {
     return o;
   }
 
+  async getLatestReceipt(storeId: string, orderId: string) {
+    await this.findOne(storeId, orderId);
+    const latest = await this.prisma.orderReceipt.findFirst({
+      where: { store_id: storeId, order_id: orderId },
+      orderBy: { created_at: 'desc' },
+    });
+    if (!latest) throw new NotFoundException('Receipt not found for this order');
+    try {
+      await access(latest.file_path);
+    } catch {
+      throw new NotFoundException('Receipt file not found in storage');
+    }
+
+    return {
+      stream: createReadStream(latest.file_path),
+      fileName: latest.file_name,
+      mimeType: latest.mime_type,
+    };
+  }
+
+  async resendReceipt(storeId: string, orderId: string) {
+    await this.findOne(storeId, orderId);
+    const receiptRecord = await this.createAndSendReceiptSafe(storeId, orderId, true);
+    if (!receiptRecord) {
+      throw new InternalServerErrorException('Failed to generate/send receipt');
+    }
+    return receiptRecord;
+  }
+
   async updateStatus(storeId: string, orderId: string, status: string) {
     await this.findOne(storeId, orderId);
     return order(this.prisma).update({
       where: { id: orderId },
       data: { status },
+    });
+  }
+
+  private async createAndSendReceiptSafe(storeId: string, orderId: string, throwOnError = false) {
+    try {
+      return await this.createAndSendReceipt(storeId, orderId);
+    } catch (error) {
+      if (throwOnError) throw error;
+      return null;
+    }
+  }
+
+  private async createAndSendReceipt(storeId: string, orderId: string) {
+    const orderWithDetails = await order(this.prisma).findFirst({
+      where: { id: orderId, store_id: storeId },
+      include: {
+        store: { select: { name: true } },
+        customer: { select: { full_name: true, phone_number: true, email: true } },
+        address: true,
+        coupon: { select: { code: true } },
+        items: {
+          include: {
+            product: { select: { title: true } },
+          },
+        },
+      },
+    });
+    if (!orderWithDetails) throw new NotFoundException('Order not found');
+
+    const receiptPdf = await this.orderReceiptsService.createReceiptPdf(orderWithDetails as any);
+    const publicBaseUrl = this.configService.get<string>('ORDER_RECEIPTS_PUBLIC_BASE_URL');
+    if (!publicBaseUrl) {
+      throw new Error('Missing ORDER_RECEIPTS_PUBLIC_BASE_URL for WhatsApp document URL');
+    }
+    const mediaUrl = `${publicBaseUrl.replace(/\/$/, '')}/${encodeURIComponent(receiptPdf.fileName)}`;
+
+    let status: 'SENT' | 'FAILED' = 'SENT';
+    let errorText: string | null = null;
+    let messageId: string | null = null;
+    try {
+      const sent = await this.orderWhatsappService.sendReceipt({
+        toPhoneNumber: orderWithDetails.customer.phone_number,
+        mediaUrl,
+        caption: `Receipt for order ${orderWithDetails.id}`,
+      });
+      messageId = sent.messageId;
+    } catch (error) {
+      status = 'FAILED';
+      errorText = error instanceof Error ? error.message : 'Unknown WhatsApp error';
+    }
+
+    return this.prisma.orderReceipt.create({
+      data: {
+        order_id: orderWithDetails.id,
+        store_id: orderWithDetails.store_id,
+        file_path: receiptPdf.filePath,
+        file_name: receiptPdf.fileName,
+        mime_type: 'application/pdf',
+        size_bytes: receiptPdf.sizeBytes,
+        whatsapp_phone: orderWithDetails.customer.phone_number,
+        whatsapp_status: status,
+        whatsapp_message_id: messageId,
+        send_attempts: 1,
+        last_error: errorText,
+        sent_at: status === 'SENT' ? new Date() : null,
+      },
     });
   }
 }

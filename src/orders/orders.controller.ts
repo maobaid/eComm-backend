@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { StoreAccessGuard } from '../auth/guards/store-access.guard.js';
@@ -8,6 +8,7 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto.js';
+import type { Response } from 'express';
 
 @ApiTags('Orders')
 @Controller('stores/:storeId/orders')
@@ -67,5 +68,30 @@ export class OrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateStatus(storeId!, orderId, dto.status);
+  }
+
+  @Post(':orderId/receipt/resend')
+  @RequireStoreManager()
+  @ApiOperation({ summary: 'Regenerate and resend order receipt via WhatsApp' })
+  @ApiOkResponse({ description: 'New receipt send attempt created' })
+  resendReceipt(
+    @ScopedStoreId() storeId: string | undefined,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+  ) {
+    return this.ordersService.resendReceipt(storeId!, orderId);
+  }
+
+  @Get(':orderId/receipt')
+  @RequireStoreManager()
+  @ApiOperation({ summary: 'Download latest order receipt PDF' })
+  async downloadReceipt(
+    @ScopedStoreId() storeId: string | undefined,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Res() res: Response,
+  ) {
+    const receipt = await this.ordersService.getLatestReceipt(storeId!, orderId);
+    res.setHeader('Content-Type', receipt.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${receipt.fileName}"`);
+    receipt.stream.pipe(res);
   }
 }
