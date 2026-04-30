@@ -94,19 +94,123 @@ export class OrderReceiptsService {
 
       doc.fontSize(12).text('Items', { underline: true });
       doc.moveDown(0.5);
-      order.items.forEach((item, index) => {
+
+      const tableStartX = doc.x;
+      const tableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const colWidths = {
+        item: tableWidth * 0.4,
+        qty: tableWidth * 0.1,
+        unit: tableWidth * 0.16,
+        discount: tableWidth * 0.16,
+        total: tableWidth * 0.18,
+      };
+      const rowHeight = 22;
+      let currentY = doc.y;
+
+      const drawRowBorders = (y: number) => {
+        doc
+          .lineWidth(0.8)
+          .rect(tableStartX, y, tableWidth, rowHeight)
+          .stroke();
+        let x = tableStartX + colWidths.item;
+        doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
+        x += colWidths.qty;
+        doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
+        x += colWidths.unit;
+        doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
+        x += colWidths.discount;
+        doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
+      };
+
+      const drawHeader = () => {
+        drawRowBorders(currentY);
+        const pad = 5;
+        doc
+          .fontSize(9)
+          .font('Helvetica-Bold')
+          .text('Item', tableStartX + pad, currentY + 7, { width: colWidths.item - pad * 2 })
+          .text('Qty', tableStartX + colWidths.item + pad, currentY + 7, {
+            width: colWidths.qty - pad * 2,
+            align: 'right',
+          })
+          .text('Unit', tableStartX + colWidths.item + colWidths.qty + pad, currentY + 7, {
+            width: colWidths.unit - pad * 2,
+            align: 'right',
+          })
+          .text(
+            'Discount',
+            tableStartX + colWidths.item + colWidths.qty + colWidths.unit + pad,
+            currentY + 7,
+            {
+              width: colWidths.discount - pad * 2,
+              align: 'right',
+            },
+          )
+          .text(
+            'Line Total',
+            tableStartX + colWidths.item + colWidths.qty + colWidths.unit + colWidths.discount + pad,
+            currentY + 7,
+            {
+              width: colWidths.total - pad * 2,
+              align: 'right',
+            },
+          );
+        currentY += rowHeight;
+      };
+
+      drawHeader();
+
+      order.items.forEach((item) => {
+        if (currentY + rowHeight > doc.page.height - doc.page.margins.bottom - 90) {
+          doc.addPage();
+          currentY = doc.page.margins.top;
+          drawHeader();
+        }
+
         const qty = item.quantity;
         const unitPrice = Number(item.unit_price);
         const discount = Number(item.product_discount_applied);
         const lineTotal = qty * unitPrice - discount;
+
+        drawRowBorders(currentY);
+        const pad = 5;
         doc
-          .fontSize(10)
+          .fontSize(9)
+          .font('Helvetica')
+          .text(item.product.title, tableStartX + pad, currentY + 7, {
+            width: colWidths.item - pad * 2,
+            ellipsis: true,
+          })
+          .text(String(qty), tableStartX + colWidths.item + pad, currentY + 7, {
+            width: colWidths.qty - pad * 2,
+            align: 'right',
+          })
+          .text(unitPrice.toFixed(2), tableStartX + colWidths.item + colWidths.qty + pad, currentY + 7, {
+            width: colWidths.unit - pad * 2,
+            align: 'right',
+          })
           .text(
-            `${index + 1}. ${item.product.title} | qty: ${qty} | unit: ${unitPrice.toFixed(2)} | discount: ${discount.toFixed(2)} | line total: ${lineTotal.toFixed(2)}`,
+            discount.toFixed(2),
+            tableStartX + colWidths.item + colWidths.qty + colWidths.unit + pad,
+            currentY + 7,
+            {
+              width: colWidths.discount - pad * 2,
+              align: 'right',
+            },
+          )
+          .text(
+            lineTotal.toFixed(2),
+            tableStartX + colWidths.item + colWidths.qty + colWidths.unit + colWidths.discount + pad,
+            currentY + 7,
+            {
+              width: colWidths.total - pad * 2,
+              align: 'right',
+            },
           );
+        currentY += rowHeight;
       });
 
-      doc.moveDown();
+      doc.y = currentY + 14;
       if (order.coupon?.code) doc.text(`Coupon: ${order.coupon.code}`);
       doc.text(`Product discounts: ${formatMoney(order.total_product_discount_amount)}`);
       doc.text(`Coupon discount: ${formatMoney(order.total_coupon_discount_amount)}`);

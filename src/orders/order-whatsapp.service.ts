@@ -2,13 +2,27 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import twilio from 'twilio';
 
-function toWhatsappAddress(phone: string): string {
+function normalizeToE164(raw: string, defaultCountryCode?: string): string {
+  const cleaned = raw.replace(/[^\d+]/g, '');
+  if (cleaned.startsWith('+')) return cleaned;
+
+  const digits = cleaned.replace(/\D/g, '');
+  if (!digits) throw new Error('Phone number is empty');
+
+  if (defaultCountryCode) {
+    const countryDigits = defaultCountryCode.replace(/\D/g, '');
+    if (countryDigits) return `+${countryDigits}${digits}`;
+  }
+
+  return `+${digits}`;
+}
+
+function toWhatsappAddress(phone: string, defaultCountryCode?: string): string {
   const trimmed = phone.replace(/\s/g, '');
   if (trimmed.toLowerCase().startsWith('whatsapp:')) {
     return trimmed;
   }
-  const e164 = trimmed.startsWith('+') ? trimmed : `+${trimmed}`;
-  return `whatsapp:${e164}`;
+  return `whatsapp:${normalizeToE164(trimmed, defaultCountryCode)}`;
 }
 
 function normalizeWhatsappFrom(from: string): string {
@@ -43,6 +57,9 @@ export class OrderWhatsappService {
     const accountSid = this.configService.get<string>('TWILIO_ACCOUNT_SID');
     const authToken = this.configService.get<string>('TWILIO_AUTH_TOKEN');
     const fromRaw = this.configService.get<string>('TWILIO_WHATSAPP_FROM');
+    const defaultCountryCode = this.configService.get<string>(
+      'TWILIO_DEFAULT_COUNTRY_CODE',
+    );
 
     if (!accountSid || !authToken || !fromRaw) {
       throw new Error(
@@ -52,7 +69,7 @@ export class OrderWhatsappService {
 
     const client = twilio(accountSid, authToken);
     const from = normalizeWhatsappFrom(fromRaw);
-    const to = toWhatsappAddress(params.toPhoneNumber);
+    const to = toWhatsappAddress(params.toPhoneNumber, defaultCountryCode);
 
     const message = await client.messages.create({
       from,
