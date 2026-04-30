@@ -25,11 +25,6 @@ export class CreateProductVariantDto {
   size?: string | null;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  sku?: string | null;
-
-  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)

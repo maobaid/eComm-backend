@@ -123,6 +123,10 @@ export class OrdersService {
             `Insufficient stock for variant ${item.product_variant_id}. Available: ${variant.stock_quantity}`,
           );
         }
+      } else if ((prod.variants || []).length > 0) {
+        throw new BadRequestException(
+          `product_variant_id is required for product ${item.product_id} because it has variants`,
+        );
       } else if (item.quantity > prod.stock_quantity) {
         throw new BadRequestException(
           `Insufficient stock for product ${item.product_id}. Available: ${prod.stock_quantity}`,
@@ -258,11 +262,6 @@ export class OrdersService {
           if (updatedVariant.count !== 1) {
             throw new BadRequestException(`Insufficient stock for variant ${l.product_variant_id}`);
           }
-
-          await product(txPrisma).update({
-            where: { id: l.product_id },
-            data: { stock_quantity: { decrement: l.quantity } },
-          });
         } else {
           const updated = await product(txPrisma).updateMany({
             where: {
@@ -276,6 +275,10 @@ export class OrdersService {
             throw new BadRequestException(`Insufficient stock for product ${l.product_id}`);
           }
         }
+      }
+      const productIdsTouched = [...new Set(lineInputs.map((l: { product_id: string }) => l.product_id))];
+      for (const pid of productIdsTouched) {
+        await this.reconcileProductAggregateStockInTx(txPrisma, pid);
       }
       if (couponId) {
         await coupon(txPrisma).update({
@@ -354,6 +357,23 @@ export class OrdersService {
     return order(this.prisma).update({
       where: { id: orderId },
       data: { status },
+    });
+  }
+
+  /** When variants exist, `product.stock_quantity` must equal Σ variant stocks (handles orders that only decrement variants). */
+  private async reconcileProductAggregateStockInTx(txPrisma: any, productId: string): Promise<void> {
+    const variants = await (txPrisma as any).productVariant.findMany({
+      where: { product_id: productId },
+      select: { stock_quantity: true },
+    });
+    if (!variants.length) return;
+    const sum = variants.reduce(
+      (acc: number, v: { stock_quantity: unknown }) => acc + Number(v.stock_quantity ?? 0),
+      0,
+    );
+    await product(txPrisma).update({
+      where: { id: productId },
+      data: { stock_quantity: sum },
     });
   }
 
