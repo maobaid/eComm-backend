@@ -25,6 +25,7 @@ interface ProductRow {
   id: string;
   price: unknown;
   category_id: string | null;
+  stock_quantity: number;
 }
 
 const APPLIES_TO = {
@@ -96,6 +97,13 @@ export class OrdersService {
     const productMap = new Map(products.map((p: ProductRow) => [p.id, p]));
     for (const item of body.items) {
       if (item.quantity < 1) throw new BadRequestException('Quantity must be at least 1');
+      const prod = productMap.get(item.product_id) as ProductRow | undefined;
+      if (!prod) throw new BadRequestException('Product not found');
+      if (item.quantity > prod.stock_quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for product ${item.product_id}. Available: ${prod.stock_quantity}`,
+        );
+      }
     }
 
     const activeProductDiscounts = await productDiscount(this.prisma).findMany({
@@ -207,6 +215,19 @@ export class OrdersService {
           product_discount_applied: l.product_discount_applied,
         })),
       });
+      for (const l of lineInputs) {
+        const updated = await product(txPrisma).updateMany({
+          where: {
+            id: l.product_id,
+            store_id: storeId,
+            stock_quantity: { gte: l.quantity },
+          },
+          data: { stock_quantity: { decrement: l.quantity } },
+        });
+        if (updated.count !== 1) {
+          throw new BadRequestException(`Insufficient stock for product ${l.product_id}`);
+        }
+      }
       if (couponId) {
         await coupon(txPrisma).update({
           where: { id: couponId },

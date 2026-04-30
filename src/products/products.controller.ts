@@ -15,10 +15,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { StoreAccessGuard } from '../auth/guards/store-access.guard.js';
 import { ScopedStoreId } from '../auth/decorators/scoped-store-id.decorator.js';
 import { RequireStoreManager } from '../auth/decorators/require-store-manager.decorator.js';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
+import { ProductsQueryDto } from './dto/products-query.dto.js';
 
 @ApiTags('Products')
 @Controller('stores/:storeId/products')
@@ -32,8 +32,11 @@ export class ProductsController {
   }
 
   @Get()
-  findAll(@Param('storeId') storeId: string, @Query() query: PaginationQueryDto) {
-    return this.productsService.findAll(storeId, query.page, query.limit);
+  findAll(@Param('storeId') storeId: string, @Query() query: ProductsQueryDto) {
+    return this.productsService.findAll(storeId, query.page, query.limit, {
+      lowStockOnly: query.low_stock_only,
+      lowStockThreshold: query.low_stock_threshold,
+    });
   }
 
   @Get(':productId')

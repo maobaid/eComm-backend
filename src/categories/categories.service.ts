@@ -35,10 +35,24 @@ export class CategoriesService {
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
+        include: {
+          _count: {
+            select: { products: true },
+          },
+        },
       }),
       cat(this.prisma).count({ where: { store_id: storeId } }),
     ]);
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+    return {
+      data: data.map((c: any) => ({
+        ...c,
+        products_count: c._count?.products ?? 0,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
   }
 
   async findOne(storeId: string, categoryId: string) {

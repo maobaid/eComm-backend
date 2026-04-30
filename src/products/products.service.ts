@@ -8,8 +8,18 @@ const product = (p: PrismaService) => (p as any).product;
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private withStockFlags<T extends { stock_quantity: number; low_stock_threshold: number }>(
+    p: T,
+  ): T & { in_stock: boolean; is_low_stock: boolean } {
+    return {
+      ...p,
+      in_stock: p.stock_quantity > 0,
+      is_low_stock: p.stock_quantity <= p.low_stock_threshold,
+    };
+  }
+
   async create(storeId: string, data: any) {
-    return product(this.prisma).create({
+    const created = await product(this.prisma).create({
       data: {
         store_id: storeId,
         category_id: data.category_id ?? null,
@@ -17,23 +27,46 @@ export class ProductsService {
         description: data.description ?? null,
         price: data.price,
         image_url: data.image_url ?? null,
+        colors: data.colors ?? [],
+        sizes: data.sizes ?? [],
+        stock_quantity: data.stock_quantity ?? 0,
+        low_stock_threshold: data.low_stock_threshold ?? 5,
         is_active: data.is_active ?? true,
       },
     });
+    return this.withStockFlags(created);
   }
 
-  async findAll(storeId: string, page: number = 1, limit: number = 20): Promise<PaginatedResult<unknown>> {
+  async findAll(
+    storeId: string,
+    page: number = 1,
+    limit: number = 20,
+    filters?: { lowStockOnly?: boolean; lowStockThreshold?: number },
+  ): Promise<PaginatedResult<unknown>> {
     const skip = (page - 1) * limit;
+    const threshold = filters?.lowStockThreshold ?? 5;
+    const where = filters?.lowStockOnly
+      ? {
+          store_id: storeId,
+          stock_quantity: { lte: threshold },
+        }
+      : { store_id: storeId };
     const [data, total] = await Promise.all([
       product(this.prisma).findMany({
-        where: { store_id: storeId },
+        where,
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
       }),
-      product(this.prisma).count({ where: { store_id: storeId } }),
+      product(this.prisma).count({ where }),
     ]);
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+    return {
+      data: data.map((p: any) => this.withStockFlags(p)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
   }
 
   async findOne(storeId: string, productId: string) {
@@ -41,7 +74,7 @@ export class ProductsService {
       where: { id: productId, store_id: storeId },
     });
     if (!p) throw new NotFoundException('Product not found');
-    return p;
+    return this.withStockFlags(p);
   }
 
   async update(storeId: string, productId: string, data: any) {
@@ -52,8 +85,14 @@ export class ProductsService {
     if (data.description !== undefined) payload.description = data.description;
     if (data.price != null) payload.price = data.price;
     if (data.image_url !== undefined) payload.image_url = data.image_url;
+    if (data.colors !== undefined) payload.colors = data.colors;
+    if (data.sizes !== undefined) payload.sizes = data.sizes;
+    if (data.stock_quantity !== undefined) payload.stock_quantity = data.stock_quantity;
+    if (data.low_stock_threshold !== undefined)
+      payload.low_stock_threshold = data.low_stock_threshold;
     if (data.is_active !== undefined) payload.is_active = data.is_active;
-    return product(this.prisma).update({ where: { id: productId }, data: payload });
+    const updated = await product(this.prisma).update({ where: { id: productId }, data: payload });
+    return this.withStockFlags(updated);
   }
 
   async remove(storeId: string, productId: string) {
