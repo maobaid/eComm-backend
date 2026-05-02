@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Express } from 'express';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -11,6 +10,7 @@ import {
   MIME_TO_EXT,
 } from './constants.js';
 import { sniffImageMime } from './image-sniff.js';
+import type { MemoryStoredUploadFile } from './memory-upload-file.types.js';
 
 const storeFind = (prisma: PrismaService) => (prisma as any).store;
 
@@ -23,7 +23,7 @@ export class CustomizationImageUploadService {
     private readonly configService: ConfigService,
   ) {}
 
-  async uploadImage(storeId: string, file?: Express.Multer.File): Promise<{ url: string }> {
+  async uploadImage(storeId: string, file?: MemoryStoredUploadFile): Promise<{ url: string }> {
     if (!file?.buffer?.length) {
       throw new BadRequestException('File is required (field name: file)');
     }

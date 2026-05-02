@@ -18,9 +18,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Express } from 'express';
 import { CustomizationImageUploadService } from './customization-image-upload.service.js';
 import { CUSTOMIZATION_IMAGE_MAX_BYTES } from './constants.js';
+import type { MemoryStoredUploadFile } from './memory-upload-file.types.js';
 
 @ApiTags('Uploads')
 @Controller('stores/:storeId')
@@ -56,7 +56,7 @@ export class CustomizationImageUploadController {
         validators: [new MaxFileSizeValidator({ maxSize: CUSTOMIZATION_IMAGE_MAX_BYTES })],
       }),
     )
-    file: Express.Multer.File,
+    file: MemoryStoredUploadFile,
   ) {
     return this.uploads.uploadImage(storeId, file);
   }
