@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { PaginatedResult } from '../common/dto/pagination-query.dto.js';
 
 const product = (p: PrismaService) => (p as any).product;
+
+const productIncludeVariantsAndCustomizations = {
+  variants: true,
+  customizations: { orderBy: { sort_order: 'asc' as const } },
+};
 
 @Injectable()
 export class ProductsService {
@@ -63,6 +68,16 @@ export class ProductsService {
   }
 
   async create(storeId: string, data: any) {
+    if (Array.isArray(data.customizations)) {
+      for (const c of data.customizations) {
+        if (c.kind === 'TEXT' && (c.max_chars == null || c.text_mode == null)) {
+          throw new BadRequestException(
+            `TEXT customization "${c.label}" requires max_chars and text_mode`,
+          );
+        }
+      }
+    }
+
     const variants = Array.isArray(data.variants) ? data.variants : [];
     const { colors: colorsFromVariants, sizes: sizesFromVariants } =
       variants.length > 0
@@ -96,8 +111,21 @@ export class ProductsService {
               })),
             }
           : undefined,
+        customizations:
+          Array.isArray(data.customizations) && data.customizations.length
+            ? {
+                create: data.customizations.map((c: any, i: number) => ({
+                  label: c.label,
+                  sort_order: c.sort_order ?? i,
+                  kind: c.kind,
+                  required: c.required ?? false,
+                  max_chars: c.kind === 'TEXT' ? c.max_chars : null,
+                  text_mode: c.kind === 'TEXT' ? c.text_mode : null,
+                })),
+              }
+            : undefined,
       },
-      include: { variants: true },
+      include: productIncludeVariantsAndCustomizations,
     });
     return this.withStockFlags(created);
   }
@@ -122,7 +150,7 @@ export class ProductsService {
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
-        include: { variants: true },
+        include: productIncludeVariantsAndCustomizations,
       }),
       product(this.prisma).count({ where }),
     ]);
@@ -138,7 +166,7 @@ export class ProductsService {
   async findOne(storeId: string, productId: string) {
     const p = await product(this.prisma).findFirst({
       where: { id: productId, store_id: storeId },
-      include: { variants: true },
+      include: productIncludeVariantsAndCustomizations,
     });
     if (!p) throw new NotFoundException('Product not found');
     return this.withStockFlags(p);
@@ -157,6 +185,28 @@ export class ProductsService {
     if (data.low_stock_threshold !== undefined)
       payload.low_stock_threshold = data.low_stock_threshold;
     if (data.is_active !== undefined) payload.is_active = data.is_active;
+
+    if (data.customizations !== undefined) {
+      const list = data.customizations || [];
+      for (const c of list) {
+        if (c.kind === 'TEXT' && (c.max_chars == null || c.text_mode == null)) {
+          throw new BadRequestException(
+            `TEXT customization "${c.label}" requires max_chars and text_mode`,
+          );
+        }
+      }
+      payload.customizations = {
+        deleteMany: {},
+        create: list.map((c: any, i: number) => ({
+          label: c.label,
+          sort_order: c.sort_order ?? i,
+          kind: c.kind,
+          required: c.required ?? false,
+          max_chars: c.kind === 'TEXT' ? c.max_chars : null,
+          text_mode: c.kind === 'TEXT' ? c.text_mode : null,
+        })),
+      };
+    }
 
     if (data.variants !== undefined) {
       const list = data.variants || [];
@@ -194,7 +244,7 @@ export class ProductsService {
 
     const refreshed = await product(this.prisma).findFirst({
       where: { id: productId, store_id: storeId },
-      include: { variants: true },
+      include: productIncludeVariantsAndCustomizations,
     });
     return this.withStockFlags(refreshed);
   }

@@ -12,7 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateProductVariantDto } from './create-product.dto.js';
+import { CreateProductCustomizationDto, CreateProductVariantDto } from './create-product.dto.js';
 
 export class UpdateProductDto {
   @IsOptional()
@@ -60,6 +60,13 @@ export class UpdateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
   variants?: CreateProductVariantDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(25)
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductCustomizationDto)
+  customizations?: CreateProductCustomizationDto[];
 
   @IsOptional()
   @Type(() => Number)

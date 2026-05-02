@@ -4,10 +4,29 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export class OrderItemCustomizationValueDto {
+  @ApiProperty({ example: 'customization-uuid' })
+  @IsUUID()
+  product_customization_id!: string;
+
+  @ApiPropertyOptional({ description: 'Required when option kind is TEXT' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  text_value?: string | null;
+
+  @ApiPropertyOptional({ description: 'Public https URL when option kind is IMAGE' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  image_url?: string | null;
+}
 
 export class CreateOrderItemDto {
   @ApiProperty({ example: 'product-uuid' })
@@ -22,6 +41,13 @@ export class CreateOrderItemDto {
   @IsOptional()
   @IsUUID()
   product_variant_id?: string;
+
+  @ApiPropertyOptional({ type: [OrderItemCustomizationValueDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrderItemCustomizationValueDto)
+  customizations?: OrderItemCustomizationValueDto[];
 }
 
 export class CreateOrderDto {

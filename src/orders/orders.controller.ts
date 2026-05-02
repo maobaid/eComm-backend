@@ -27,6 +27,11 @@ export class OrdersController {
         product_id: i.product_id,
         quantity: i.quantity,
         product_variant_id: i.product_variant_id,
+        customizations: i.customizations?.map((c) => ({
+          product_customization_id: c.product_customization_id,
+          text_value: c.text_value,
+          image_url: c.image_url,
+        })),
       })),
       coupon_code: dto.coupon_code,
       scheduled_delivery: dto.scheduled_delivery,

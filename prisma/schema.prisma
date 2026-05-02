@@ -107,6 +107,16 @@ model Category {
   @@index([parent_id])
 }
 
+enum ProductCustomizationKind {
+  TEXT
+  IMAGE
+}
+
+enum ProductCustomizationTextMode {
+  SINGLE_WORD
+  SENTENCE
+}
+
 model Product {
   id          String   @id @default(uuid())
   store_id    String
@@ -125,9 +135,25 @@ model Product {
   category    Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
   orderItems  OrderItem[]
   variants    ProductVariant[]
+  customizations ProductCustomization[]
   productDiscountItems ProductDiscountItem[]
   @@index([store_id])
   @@index([category_id])
+}
+
+model ProductCustomization {
+  id          String                     @id @default(uuid())
+  product_id  String
+  label       String
+  sort_order  Int                        @default(0)
+  kind        ProductCustomizationKind
+  required    Boolean                    @default(false)
+  max_chars   Int?
+  text_mode   ProductCustomizationTextMode?
+  created_at  DateTime                   @default(now())
+  product     Product                    @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  @@index([product_id])
+  @@index([product_id, sort_order])
 }
 
 model ProductVariant {
@@ -253,9 +279,23 @@ model OrderItem {
   order                    Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
   product                  Product  @relation(fields: [product_id], references: [id], onDelete: Restrict)
   variant                  ProductVariant? @relation(fields: [product_variant_id], references: [id], onDelete: Restrict)
+  customization_values   OrderItemCustomization[]
   @@index([order_id])
   @@index([product_id])
   @@index([product_variant_id])
+}
+
+/** Snapshots admin rules at checkout time (no FK to ProductCustomization) so product definitions can change later. */
+model OrderItemCustomization {
+  id              String                     @id @default(uuid())
+  order_item_id   String
+  label_snapshot  String
+  kind            ProductCustomizationKind
+  text_mode       ProductCustomizationTextMode?
+  text_value      String?
+  image_url       String?
+  order_item      OrderItem                  @relation(fields: [order_item_id], references: [id], onDelete: Cascade)
+  @@index([order_item_id])
 }
 
 model DeliverySetting {

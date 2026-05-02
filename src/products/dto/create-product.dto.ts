@@ -2,16 +2,51 @@ import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export class CreateProductCustomizationDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  label!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  sort_order?: number;
+
+  @IsIn(['TEXT', 'IMAGE'])
+  kind!: 'TEXT' | 'IMAGE';
+
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
+
+  @ValidateIf((o: CreateProductCustomizationDto) => o.kind === 'TEXT')
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5000)
+  max_chars?: number;
+
+  @ValidateIf((o: CreateProductCustomizationDto) => o.kind === 'TEXT')
+  @IsIn(['SINGLE_WORD', 'SENTENCE'])
+  text_mode?: 'SINGLE_WORD' | 'SENTENCE';
+}
 
 export class CreateProductVariantDto {
   @IsOptional()
@@ -90,6 +125,13 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
   variants?: CreateProductVariantDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(25)
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductCustomizationDto)
+  customizations?: CreateProductCustomizationDto[];
 
   @IsOptional()
   @Type(() => Number)

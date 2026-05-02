@@ -10,6 +10,11 @@ import { createReadStream } from 'node:fs';
 import { access } from 'node:fs/promises';
 import { OrderReceiptsService } from './order-receipts.service.js';
 import { OrderWhatsappService } from './order-whatsapp.service.js';
+import {
+  type ProductCustomizationDef,
+  type SubmittedCustomization,
+  validateAndBuildCustomizationSnapshots,
+} from './order-item-customizations.util.js';
 
 const store = (p: any) => p.store;
 const customer = (p: any) => p.customer;
@@ -32,6 +37,19 @@ interface ProductRow {
     price_override: unknown;
     is_active: boolean;
   }>;
+  customizations?: any[];
+}
+
+function mapCustomizationDefs(rows: ProductRow['customizations']): ProductCustomizationDef[] {
+  return (rows ?? []).map((d: any) => ({
+    id: d.id,
+    label: d.label,
+    kind: d.kind as 'TEXT' | 'IMAGE',
+    required: !!d.required,
+    max_chars: d.max_chars,
+    text_mode: d.text_mode as 'SINGLE_WORD' | 'SENTENCE' | null,
+    sort_order: Number(d.sort_order ?? 0),
+  }));
 }
 
 const APPLIES_TO = {
@@ -65,7 +83,12 @@ export class OrdersService {
     body: {
       customer_id: string;
       address_id: string;
-      items: { product_id: string; quantity: number; product_variant_id?: string }[];
+      items: {
+        product_id: string;
+        quantity: number;
+        product_variant_id?: string;
+        customizations?: SubmittedCustomization[];
+      }[];
       coupon_code?: string;
       scheduled_delivery?: string;
     },
@@ -101,6 +124,7 @@ export class OrdersService {
           where: { is_active: true },
           select: { id: true, stock_quantity: true, price_override: true, is_active: true },
         },
+        customizations: { orderBy: { sort_order: 'asc' as const } },
       },
     });
     if (products.length !== productIds.length) {
@@ -164,12 +188,18 @@ export class OrdersService {
         if (applies) bestPct = Math.max(bestPct, Number(d.percentage));
       }
       const productDiscountApplied = round2(lineSubtotal * (bestPct / 100));
+      const customization_snapshots = validateAndBuildCustomizationSnapshots(
+        prod.id,
+        mapCustomizationDefs(prod.customizations),
+        item.customizations,
+      );
       return {
         product_id: prod.id,
         product_variant_id: item.product_variant_id ?? null,
         quantity: qty,
         unit_price: unitPrice,
         product_discount_applied: productDiscountApplied,
+        customization_snapshots,
       };
     });
 
@@ -238,16 +268,31 @@ export class OrdersService {
           scheduled_delivery: scheduledDelivery,
         },
       });
-      await orderItem(txPrisma).createMany({
-        data: lineInputs.map((l) => ({
-          order_id: created.id,
-          product_id: l.product_id,
-          product_variant_id: l.product_variant_id,
-          quantity: l.quantity,
-          unit_price: l.unit_price,
-          product_discount_applied: l.product_discount_applied,
-        })),
-      });
+      for (const l of lineInputs) {
+        await orderItem(txPrisma).create({
+          data: {
+            order_id: created.id,
+            product_id: l.product_id,
+            product_variant_id: l.product_variant_id,
+            quantity: l.quantity,
+            unit_price: l.unit_price,
+            product_discount_applied: l.product_discount_applied,
+            ...(l.customization_snapshots.length
+              ? {
+                  customization_values: {
+                    create: l.customization_snapshots.map((s) => ({
+                      label_snapshot: s.label_snapshot,
+                      kind: s.kind,
+                      text_mode: s.text_mode,
+                      text_value: s.text_value,
+                      image_url: s.image_url,
+                    })),
+                  },
+                }
+              : {}),
+          },
+        });
+      }
       for (const l of lineInputs) {
         if (l.product_variant_id) {
           const updatedVariant = await (txPrisma as any).productVariant.updateMany({
@@ -301,7 +346,13 @@ export class OrdersService {
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
-        include: { items: true },
+        include: {
+          items: {
+            include: {
+              customization_values: true,
+            },
+          },
+        },
       }),
       order(this.prisma).count({ where: { store_id: storeId } }),
     ]);
@@ -317,7 +368,18 @@ export class OrdersService {
   async findOne(storeId: string, orderId: string) {
     const o = await order(this.prisma).findFirst({
       where: { id: orderId, store_id: storeId },
-      include: { items: true, customer: true, address: true, coupon: true },
+      include: {
+        items: {
+          include: {
+            customization_values: true,
+            product: { select: { title: true } },
+            variant: { select: { color: true, size: true } },
+          },
+        },
+        customer: true,
+        address: true,
+        coupon: true,
+      },
     });
     if (!o) throw new NotFoundException('Order not found');
     return o;
@@ -397,6 +459,7 @@ export class OrdersService {
         items: {
           include: {
             product: { select: { title: true } },
+            customization_values: true,
           },
         },
       },

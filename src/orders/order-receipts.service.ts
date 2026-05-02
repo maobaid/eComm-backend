@@ -25,6 +25,13 @@ type ReceiptOrderData = {
     unit_price: unknown;
     product_discount_applied: unknown;
     product: { title: string };
+    customization_values?: Array<{
+      label_snapshot: string;
+      kind: string;
+      text_mode: string | null;
+      text_value: string | null;
+      image_url: string | null;
+    }>;
   }>;
   total_amount: unknown;
   total_product_discount_amount: unknown;
@@ -208,6 +215,24 @@ export class OrderReceiptsService {
             },
           );
         currentY += rowHeight;
+
+        const custPadding = tableStartX + 8;
+        if (item.customization_values?.length) {
+          doc.fontSize(7).font('Helvetica-Oblique');
+          for (const c of item.customization_values) {
+            if (currentY + 14 > doc.page.height - doc.page.margins.bottom - 90) {
+              doc.addPage();
+              currentY = doc.page.margins.top;
+            }
+            const line =
+              c.kind === 'IMAGE'
+                ? `${c.label_snapshot}: ${c.image_url ?? '-'}`
+                : `${c.label_snapshot}: ${c.text_value ?? '-'}`;
+            doc.text(line, custPadding, currentY + 2, { width: tableWidth - 16 });
+            currentY += 12;
+          }
+          doc.font('Helvetica').fontSize(9);
+        }
       });
 
       doc.y = currentY + 14;
