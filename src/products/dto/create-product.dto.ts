@@ -18,6 +18,11 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateProductCustomizationDto {
+  /** Allowed for round-trip from GET; ignored on save (definitions are replaced wholesale). */
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @IsString()
   @MinLength(1)
   @MaxLength(200)
