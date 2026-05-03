@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { OrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { PaginatedResult } from '../common/dto/pagination-query.dto.js';
 
@@ -170,6 +171,63 @@ export class ProductsService {
     });
     if (!p) throw new NotFoundException('Product not found');
     return this.withStockFlags(p);
+  }
+
+  /**
+   * Active products ranked by summed line-item quantity on non-cancelled orders.
+   */
+  async findBestSellers(
+    storeId: string,
+    limit = 10,
+    options?: { days?: number },
+  ): Promise<Array<Record<string, unknown> & { units_sold: number }>> {
+    const take = Math.min(Math.max(Number(limit) || 10, 1), 50);
+    const cutoff =
+      options?.days != null && options.days > 0
+        ? new Date(Date.now() - options.days * 86_400_000)
+        : undefined;
+
+    const grouped = await this.prisma.orderItem.groupBy({
+      by: ['product_id'],
+      where: {
+        order: {
+          store_id: storeId,
+          status: { not: OrderStatus.CANCELLED },
+          ...(cutoff ? { created_at: { gte: cutoff } } : {}),
+        },
+        product: {
+          store_id: storeId,
+          is_active: true,
+        },
+      },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take,
+    });
+
+    const productIds = grouped.map((g) => g.product_id);
+    if (!productIds.length) return [];
+
+    const soldByProduct = new Map(
+      grouped.map((g) => [g.product_id, Number(g._sum.quantity ?? 0)] as const),
+    );
+
+    const rows = await product(this.prisma).findMany({
+      where: { id: { in: productIds }, store_id: storeId },
+      include: productIncludeVariantsAndCustomizations,
+    });
+    const byId = new Map(rows.map((p: { id: string }) => [p.id, p]));
+
+    const out: Array<ReturnType<ProductsService['withStockFlags']> & { units_sold: number }> = [];
+    for (const id of productIds) {
+      const p = byId.get(id);
+      if (!p) continue;
+      out.push({
+        ...(this.withStockFlags(p as any) as ReturnType<ProductsService['withStockFlags']>),
+        units_sold: soldByProduct.get(id) ?? 0,
+      });
+    }
+    return out;
   }
 
   async update(storeId: string, productId: string, data: any) {

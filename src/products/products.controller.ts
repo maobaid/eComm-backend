@@ -19,6 +19,7 @@ import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ProductsQueryDto } from './dto/products-query.dto.js';
+import { BestSellersQueryDto } from './dto/best-sellers-query.dto.js';
 
 @ApiTags('Products')
 @Controller('stores/:storeId/products')
@@ -36,6 +37,18 @@ export class ProductsController {
     return this.productsService.findAll(storeId, query.page, query.limit, {
       lowStockOnly: query.low_stock_only,
       lowStockThreshold: query.low_stock_threshold,
+    });
+  }
+
+  @Get('best-sellers')
+  @ApiOperation({
+    summary: 'Best-selling active products by units sold (non-cancelled orders only)',
+    description:
+      'Optional `days` limits to orders placed in the last N days (rolling window). Omits inactive products.',
+  })
+  findBestSellers(@Param('storeId') storeId: string, @Query() query: BestSellersQueryDto) {
+    return this.productsService.findBestSellers(storeId, query.limit, {
+      days: query.days,
     });
   }
 
