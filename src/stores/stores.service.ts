@@ -4,9 +4,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { UpdateStoreThemeDto } from './dto/update-store-theme.dto.js';
+import { isValidStoreSlug } from './store-slug.constants.js';
 
-const STORE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const storeThemeSelect = {
+  primary_color: true,
+  secondary_color: true,
+  accent_color: true,
+  highlight_color: true,
+  logo_url: true,
+  font_family: true,
+} satisfies Prisma.StoreSelect;
 
 @Injectable()
 export class StoresService {
@@ -36,7 +46,7 @@ export class StoresService {
 
   /** Public storefront: active store only, limited fields. */
   async findPublicBySlug(slug: string) {
-    if (!STORE_SLUG_RE.test(slug)) {
+    if (!isValidStoreSlug(slug)) {
       throw new BadRequestException('Invalid store slug');
     }
     const store = await this.prisma.store.findFirst({
@@ -54,5 +64,65 @@ export class StoresService {
     });
     if (!store) throw new NotFoundException('Store not found');
     return store;
+  }
+
+  /**
+   * For registration / admin UI: slug is unique in DB (`Store.slug` @unique).
+   * Frontend should mirror {@link isValidStoreSlug} before calling create/register.
+   */
+  async checkSlugAvailability(slug: string): Promise<{
+    slug: string;
+    available: boolean;
+    reason?: 'invalid_format' | 'taken';
+  }> {
+    const trimmed = slug.trim();
+    if (!isValidStoreSlug(trimmed)) {
+      return { slug: trimmed, available: false, reason: 'invalid_format' };
+    }
+    const existing = await this.prisma.store.findUnique({
+      where: { slug: trimmed },
+      select: { id: true },
+    });
+    if (existing) {
+      return { slug: trimmed, available: false, reason: 'taken' };
+    }
+    return { slug: trimmed, available: true };
+  }
+
+  async updateTheme(storeId: string, dto: UpdateStoreThemeDto) {
+    const exists = await this.prisma.store.findUnique({
+      where: { id: storeId },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Store not found');
+
+    const data: Prisma.StoreUpdateInput = {};
+    const keys = [
+      'primary_color',
+      'secondary_color',
+      'accent_color',
+      'highlight_color',
+      'logo_url',
+      'font_family',
+    ] as const;
+
+    for (const key of keys) {
+      if (dto[key] === undefined) continue;
+      const raw = dto[key] as string;
+      data[key] = raw.trim() === '' ? null : raw.trim();
+    }
+
+    if (Object.keys(data).length === 0) {
+      return this.prisma.store.findUniqueOrThrow({
+        where: { id: storeId },
+        select: storeThemeSelect,
+      });
+    }
+
+    return this.prisma.store.update({
+      where: { id: storeId },
+      data,
+      select: storeThemeSelect,
+    });
   }
 }

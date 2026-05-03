@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { STORE_SLUG_MAX_LENGTH, STORE_SLUG_REGEX } from '../../stores/store-slug.constants.js';
 
 export class RegisterStoreDto {
   @ApiProperty({ example: 'Jane Doe' })
@@ -25,8 +26,8 @@ export class RegisterStoreDto {
   @ApiProperty({ example: 'janes-shop', description: 'URL-friendly slug (lowercase, hyphens)' })
   @IsString()
   @MinLength(1)
-  @MaxLength(100)
-  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+  @MaxLength(STORE_SLUG_MAX_LENGTH)
+  @Matches(STORE_SLUG_REGEX, {
     message: 'store_slug must be lowercase letters, numbers, and hyphens only',
   })
   store_slug!: string;
