@@ -19,13 +19,25 @@ enum UserRole {
   STAFF
 }
 
+enum StoreType {
+  PHYSICAL
+  DIGITAL
+  APPOINTMENT
+}
+
 model Store {
   id                     String    @id @default(uuid())
   name                   String
   slug                   String    @unique
+  store_type             StoreType @default(PHYSICAL)
   subscription_plan      String?
   allow_discount_stacking Boolean  @default(false)
   is_active              Boolean   @default(true)
+  primary_color          String?
+  secondary_color        String?
+  accent_color           String?
+  logo_url               String?
+  font_family            String?
   created_at             DateTime  @default(now())
   users                  User[]
   customers              Customer[]
