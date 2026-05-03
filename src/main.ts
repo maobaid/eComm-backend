@@ -45,6 +45,11 @@ async function bootstrap() {
   );
   app.use('/public/customization-uploads', serveStatic(customizationUploadDir));
 
+  const storeLogoUploadDir = path.resolve(
+    configService.get<string>('STORE_LOGO_UPLOAD_DIR') ?? './storage/store-logo-uploads',
+  );
+  app.use('/public/store-logo-uploads', serveStatic(storeLogoUploadDir));
+
   app.enableCors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
