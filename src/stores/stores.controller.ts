@@ -28,6 +28,27 @@ export class StoresController {
     });
   }
 
+  @Get(':slug/public')
+  @ApiOperation({ summary: 'Public store by slug (no auth)' })
+  @ApiOkResponse({
+    description: 'Public-safe branding fields for an active store',
+    schema: {
+      example: {
+        id: 'uuid',
+        name: 'My Store',
+        slug: 'my-store',
+        store_type: 'PHYSICAL',
+        primary_color: '#111111',
+        accent_color: '#ff6600',
+        logo_url: 'https://example.com/logo.png',
+        font_family: 'Inter, system-ui, sans-serif',
+      },
+    },
+  })
+  getPublicBySlug(@Param('slug') slug: string) {
+    return this.storesService.findPublicBySlug(slug);
+  }
+
   @UseGuards(JwtAuthGuard, StoreAccessGuard)
   @Get(':storeId')
   @ApiOperation({ summary: 'Get store by id' })
