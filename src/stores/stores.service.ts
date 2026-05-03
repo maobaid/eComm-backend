@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { UpdateStoreThemeDto } from './dto/update-store-theme.dto.js';
+import { normalizeStoreBranding } from './store-branding.util.js';
 import { isValidStoreSlug } from './store-slug.constants.js';
 
 const storeThemeSelect = {
@@ -96,21 +97,7 @@ export class StoresService {
     });
     if (!exists) throw new NotFoundException('Store not found');
 
-    const data: Prisma.StoreUpdateInput = {};
-    const keys = [
-      'primary_color',
-      'secondary_color',
-      'accent_color',
-      'highlight_color',
-      'logo_url',
-      'font_family',
-    ] as const;
-
-    for (const key of keys) {
-      if (dto[key] === undefined) continue;
-      const raw = dto[key] as string;
-      data[key] = raw.trim() === '' ? null : raw.trim();
-    }
+    const data = normalizeStoreBranding(dto) as Prisma.StoreUpdateInput;
 
     if (Object.keys(data).length === 0) {
       return this.prisma.store.findUniqueOrThrow({

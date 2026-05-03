@@ -2,7 +2,9 @@ import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/co
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { normalizeStoreBranding } from '../stores/store-branding.util.js';
 import { UserRole } from './constants.js';
+import type { RegisterStoreDto } from './dto/register-store.dto.js';
 import type { JwtPayload } from './strategies/jwt.strategy.js';
 
 export interface AuthUser {
@@ -73,35 +75,48 @@ export class AuthService {
    * Self-signup: create a store and its owner (STORE_ADMIN) in one transaction.
    * Use this when a new merchant wants to open a store.
    */
-  async registerStore(data: {
-    name: string;
-    email: string;
-    password: string;
-    store_name: string;
-    store_slug: string;
-  }): Promise<{ user: AuthUser; store: { id: string; name: string; slug: string } }> {
+  async registerStore(data: RegisterStoreDto): Promise<{
+    user: AuthUser;
+    store: {
+      id: string;
+      name: string;
+      slug: string;
+      primary_color: string | null;
+      secondary_color: string | null;
+      accent_color: string | null;
+      highlight_color: string | null;
+      logo_url: string | null;
+      font_family: string | null;
+    };
+  }> {
     const email = data.email.trim().toLowerCase();
+    const storeSlug = data.store_slug.trim();
+    const storeName = data.store_name.trim();
+    const ownerName = data.name.trim();
+
     const existingUser = await this.findUserByEmail(email);
     if (existingUser) throw new ConflictException('Email already registered');
 
     const existingSlug = await (this.prisma as any).store.findUnique({
-      where: { slug: data.store_slug },
+      where: { slug: storeSlug },
     });
     if (existingSlug) throw new ConflictException('Store slug already taken');
 
     const password_hash = await bcrypt.hash(data.password, 10);
+    const branding = normalizeStoreBranding(data);
 
     const result = await this.prisma.$transaction(async (tx: any) => {
       const store = await tx.store.create({
         data: {
-          name: data.store_name,
-          slug: data.store_slug,
+          name: storeName,
+          slug: storeSlug,
           is_active: true,
+          ...branding,
         },
       });
       const user = await tx.user.create({
         data: {
-          name: data.name,
+          name: ownerName,
           email,
           password_hash,
           role: UserRole.STORE_ADMIN,
@@ -111,9 +126,20 @@ export class AuthService {
       return { store, user };
     });
 
+    const s = result.store;
     return {
       user: this.toAuthUser(result.user),
-      store: { id: result.store.id, name: result.store.name, slug: result.store.slug },
+      store: {
+        id: s.id,
+        name: s.name,
+        slug: s.slug,
+        primary_color: s.primary_color ?? null,
+        secondary_color: s.secondary_color ?? null,
+        accent_color: s.accent_color ?? null,
+        highlight_color: s.highlight_color ?? null,
+        logo_url: s.logo_url ?? null,
+        font_family: s.font_family ?? null,
+      },
     };
   }
 

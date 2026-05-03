@@ -47,16 +47,29 @@ export class AuthController {
   @Post('register-store')
   @ApiOperation({ summary: 'Create a store and its owner (STORE_ADMIN) in one step' })
   @ApiBody({ type: RegisterStoreDto })
-  @ApiResponse({ status: 201, description: 'Store and owner created', schema: { example: { user: { id: 'uuid', email: 'jane@store.com', name: 'Jane', role: 'STORE_ADMIN', store_id: 'store-uuid' }, store: { id: 'store-uuid', name: "Jane's Shop", slug: 'janes-shop' } } } })
+  @ApiResponse({
+    status: 201,
+    description: 'Store and owner created',
+    schema: {
+      example: {
+        user: { id: 'uuid', email: 'jane@store.com', name: 'Jane', role: 'STORE_ADMIN', store_id: 'store-uuid' },
+        store: {
+          id: 'store-uuid',
+          name: "Jane's Shop",
+          slug: 'janes-shop',
+          primary_color: '#111111',
+          secondary_color: null,
+          accent_color: '#ff6600',
+          highlight_color: null,
+          logo_url: 'https://api.example.com/public/customization-uploads/.../logo.webp',
+          font_family: 'Inter, system-ui, sans-serif',
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 409, description: 'Email or store slug already taken' })
   async registerStore(@Body() dto: RegisterStoreDto) {
-    return this.authService.registerStore({
-      name: dto.name.trim(),
-      email: dto.email.trim().toLowerCase(),
-      password: dto.password,
-      store_name: dto.store_name.trim(),
-      store_slug: dto.store_slug.trim(),
-    });
+    return this.authService.registerStore(dto);
   }
 
   @UseGuards(JwtAuthGuard)

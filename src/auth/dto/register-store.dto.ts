@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { StoreBrandingFieldsDto } from '../../stores/dto/store-branding-fields.dto.js';
 import { STORE_SLUG_MAX_LENGTH, STORE_SLUG_REGEX } from '../../stores/store-slug.constants.js';
 
-export class RegisterStoreDto {
+export class RegisterStoreDto extends StoreBrandingFieldsDto {
   @ApiProperty({ example: 'Jane Doe' })
   @IsString()
   @MinLength(1)
