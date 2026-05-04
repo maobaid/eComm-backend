@@ -28,7 +28,7 @@ Respond ONLY with a valid JSON object. No explanation, no markdown, no backticks
   "accent_color": "#hexcode",
   "highlight_color": "#hexcode",
   "font_family": "Cairo",
-  "reasoning": "جملة عربية قصيرة تشرح سبب اختيار هذه الألوان والخط"
+  "reasoning": "جملة عربية قصيرة جدا بدون ابتذال وتكون باللهجه الكويتية تشرح سبب اختيار هذه الألوان والخط"
 }
 
 Strict rules:

@@ -23,6 +23,7 @@ const ALLOWED_FONTS = new Map<string, string>([
 
 export type SuggestThemeResult = {
   primary_color: string;
+  secondary_color: string;
   accent_color: string;
   highlight_color: string;
   font_family: string;
@@ -172,6 +173,9 @@ export class StoreThemeSuggestionService {
       const primary_color = normalizeHexColor(
         String(parsed.primary_color ?? ''),
       );
+      const secondary_color = normalizeHexColor(
+        String(parsed.secondary_color ?? ''),
+      );
       const accent_color = normalizeHexColor(String(parsed.accent_color ?? ''));
       const highlight_color = normalizeHexColor(
         String(parsed.highlight_color ?? ''),
@@ -179,7 +183,12 @@ export class StoreThemeSuggestionService {
       const fontRaw = String(parsed.font_family ?? '').trim();
       const reasoning = String(parsed.reasoning ?? '').trim();
 
-      if (!primary_color || !accent_color || !highlight_color) {
+      if (
+        !primary_color ||
+        !secondary_color ||
+        !accent_color ||
+        !highlight_color
+      ) {
         throw new Error('invalid hex colors after normalize');
       }
       const font_family = normalizeFont(fontRaw);
@@ -189,6 +198,7 @@ export class StoreThemeSuggestionService {
 
       return {
         primary_color,
+        secondary_color,
         accent_color,
         highlight_color,
         font_family,

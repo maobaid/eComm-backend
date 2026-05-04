@@ -49,6 +49,7 @@ export class StoresController {
     schema: {
       example: {
         primary_color: '#3a1f6e',
+        secondary_color: '#f5f3ff',
         accent_color: '#f4a300',
         highlight_color: '#22c55e',
         font_family: 'Cairo',
