@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -9,12 +10,17 @@ import { RequireStoreManager } from '../auth/decorators/require-store-manager.de
 import { UserRole } from '../auth/constants.js';
 import { StoresService } from './stores.service.js';
 import { CreateStoreDto } from './dto/create-store.dto.js';
+import { SuggestThemeDto } from './dto/suggest-theme.dto.js';
 import { UpdateStoreThemeDto } from './dto/update-store-theme.dto.js';
+import { StoreThemeSuggestionService } from './store-theme-suggestion.service.js';
 
 @ApiTags('Stores')
 @Controller('stores')
 export class StoresController {
-  constructor(private readonly storesService: StoresService) {}
+  constructor(
+    private readonly storesService: StoresService,
+    private readonly themeSuggestion: StoreThemeSuggestionService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,6 +35,29 @@ export class StoresController {
       slug: dto.slug,
       is_active: dto.is_active,
     });
+  }
+
+  @Post('suggest-theme')
+  @UseGuards(ThrottlerGuard)
+  @ApiOperation({
+    summary: 'Suggest brand colors and font from a base64 logo (no auth)',
+    description:
+      'Calls Anthropic Claude with the logo image. Requires ANTHROPIC_API_KEY. Uses the same IP throttling as uploads (CUSTOMIZATION_UPLOAD_THROTTLE_*).',
+  })
+  @ApiBody({ type: SuggestThemeDto })
+  @ApiOkResponse({
+    schema: {
+      example: {
+        primary_color: '#3a1f6e',
+        accent_color: '#f4a300',
+        highlight_color: '#22c55e',
+        font_family: 'Cairo',
+        reasoning: 'الألوان مستوحاة من درجات الشعار مع خط عربي حديث يناسب الهوية.',
+      },
+    },
+  })
+  suggestTheme(@Body() dto: SuggestThemeDto) {
+    return this.themeSuggestion.suggestFromLogo(dto);
   }
 
   @Get('check-slug/:slug')
