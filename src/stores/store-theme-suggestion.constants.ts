@@ -11,6 +11,7 @@ Analyze the logo's colors, shapes, style, and overall mood. Then design a profes
 
 Rules for color selection:
 - primary_color: the main brand color used for headers, navbars, and primary buttons — derive it from the logo's dominant or most characteristic color, but adjust lightness/saturation if needed to ensure it works on a website (avoid colors that are too light or too washed out)
+- secondary_color: used for background colors, card backgrounds, and secondary buttons — must complement primary_color with clear visual contrast but still feel harmonious
 - accent_color: used for secondary buttons, links, hover states, and borders — must complement primary_color with clear visual contrast but still feel harmonious
 - highlight_color: used for badges, icons, sale tags, and small decorative elements — should be vibrant enough to draw attention and add life to the page without clashing with the other two colors
 
@@ -23,6 +24,7 @@ Rules for font selection:
 Respond ONLY with a valid JSON object. No explanation, no markdown, no backticks, no extra text before or after:
 {
   "primary_color": "#hexcode",
+  "secondary_color": "#hexcode",
   "accent_color": "#hexcode",
   "highlight_color": "#hexcode",
   "font_family": "Cairo",
